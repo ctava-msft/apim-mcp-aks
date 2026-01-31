@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+tests/test_apim_mcp_connection.py#!/usr/bin/env python3
 """
 Complete APIM + MCP + AKS Integration Test
 

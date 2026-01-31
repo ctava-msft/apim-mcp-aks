@@ -5,8 +5,12 @@ metadata:
   namespace: mcp-server
   annotations:
     service.beta.kubernetes.io/azure-load-balancer-internal: "false"  # Public load balancer
+    # The resource group where the public IP resides (set by post-provision script)
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: "${AZURE_RESOURCE_GROUP_NAME}"
 spec:
   type: LoadBalancer
+  # Static IP allocated by Bicep (set by post-provision script)
+  loadBalancerIP: "${MCP_PUBLIC_IP_ADDRESS}"
   selector:
     app: mcp-server
   ports:

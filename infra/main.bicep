@@ -78,17 +78,18 @@ module oauthAPIModule './app/apim-oauth/oauth.bicep' = {
   }
 }
 
-// MCP server API endpoints pointing to AKS service
+// MCP server API endpoints pointing to AKS service via public LoadBalancer
 module mcpApiModule './app/apim-mcp/mcp-api.bicep' = {
   name: 'mcpApiModule'
   scope: rg
   params: {
     apimServiceName: apimService.name
-    mcpServerBackendUrl: 'http://mcp-server.mcp-server.svc.cluster.local/runtime/webhooks/mcp'
+    mcpServerBackendUrl: 'http://${mcpPublicIp.outputs.publicIpAddress}/runtime/webhooks/mcp'
   }
   dependsOn: [
     aksCluster
     oauthAPIModule
+    mcpPublicIp
   ]
 }
 
@@ -156,6 +157,19 @@ module aksCluster './core/aks/aks-cluster.bicep' = {
   dependsOn: vnetEnabled ? [
     serviceVirtualNetworkEarly
   ] : []
+}
+
+// Static Public IP for MCP Server LoadBalancer
+// This IP is used by the Kubernetes LoadBalancer service and APIM backend
+module mcpPublicIp './core/network/public-ip.bicep' = {
+  name: 'mcpPublicIp'
+  scope: rg
+  params: {
+    publicIpName: 'pip-mcp-${resourceToken}'
+    location: location
+    tags: tags
+    dnsLabel: 'mcp-${resourceToken}'
+  }
 }
 
 // Grant AKS pull access to ACR
@@ -286,4 +300,7 @@ output MCP_OAUTH_TOKEN_URL string = '${apimService.outputs.gatewayUrl}/mcp/oauth
 output MCP_CLIENT_ID string = existingEntraAppId
 output AZURE_RESOURCE_GROUP_NAME string = rg.name
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
+output MCP_PUBLIC_IP_ADDRESS string = mcpPublicIp.outputs.publicIpAddress
+output MCP_PUBLIC_IP_NAME string = 'pip-mcp-${resourceToken}'
+output AKS_NODE_RESOURCE_GROUP string = 'MC_${rg.name}_${abbrs.containerServiceManagedClusters}${resourceToken}_${location}'
 
