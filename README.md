@@ -81,19 +81,4 @@ Expected: `{"status": "ok"}`
 
 ```bash
 python tests/test_apim_mcp_connection.py --generate-token
-python tests/test_apim_mcp_use_cases.py
 ```
-
-## MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `hello_mcp` | Test connectivity |
-| `save_snippet` | Save text to storage |
-| `get_snippet` | Retrieve saved text |
-
-## Endpoints
-
-- **SSE**: `https://<apim>.azure-api.net/mcp/sse`
-- **Message**: `https://<apim>.azure-api.net/mcp/message`
-- **OAuth**: `https://<apim>.azure-api.net/oauth/authorize`

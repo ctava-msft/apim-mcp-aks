@@ -178,3 +178,5 @@ cython_debug/
 mcp_tokens.json
 .history/
 .venv
+./tests/mcp_test.env
+./tests/mcp_test_config.json

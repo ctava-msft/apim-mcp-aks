@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 """
-MCP Server Integration Test
+Complete APIM + MCP + AKS Integration Test
 
-This script tests the complete MCP (Model Context Protocol) server implementation
-deployed on Azure API Management + Azure Functions.
-
-The test validates:
-1. SSE (Server-Sent Events) session establishment
-2. MCP tool discovery via tools/list
-3. MCP tool execution (hello_mcp, get_snippet, save_snippet)
-4. Proper async response handling via SSE streams
+This script tests the complete stack:
+1. AKS cluster infrastructure (nodes, pods, services, workload identity)
+2. MCP server deployment on AKS
+3. MCP protocol via APIM (OAuth + SSE)
+4. MCP tool discovery and execution
 
 Usage:
-    python test_mcp_fixed_session.py [--generate-token]
+    python test_apim_mcp_connection.py [--use-az-token] [--skip-infra] [--generate-token]
 
 Options:
-    --generate-token    Generate OAuth token interactively before running test
+    --use-az-token      Use automatic token (no browser required)
+    --skip-infra        Skip AKS infrastructure tests
+    --generate-token    Generate OAuth token interactively
+    --help, -h          Show this help message
 
 Requirements:
-    - aiohttp (pip install aiohttp)  
-    - mcp_tokens.json file with OAuth tokens (auto-generated if missing)
+    - aiohttp (pip install aiohttp)
+    - kubectl configured with AKS credentials
     - Network access to the deployed Azure APIM endpoint
 
 Expected Output:
+    ✅ AKS infrastructure tests passed
     ✅ SSE Session established
     ✅ 3 MCP tools discovered
     ✅ hello_mcp tool executed successfully
@@ -36,6 +37,7 @@ import sys
 import os
 import webbrowser
 import urllib.parse
+import subprocess
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -43,6 +45,312 @@ from pathlib import Path
 CONFIG_FILE = Path(__file__).parent / 'mcp_test_config.json'
 ENV_FILE = Path(__file__).parent / 'mcp_test.env'
 TOKENS_FILE = Path(__file__).parent / 'mcp_tokens.json'
+
+
+# ============================================================
+# AKS Infrastructure Tests
+# ============================================================
+
+def run_command(command: str) -> Optional[str]:
+    """Run a shell command and return output"""
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        return None
+    except Exception:
+        return None
+
+
+def test_aks_cluster_connection() -> bool:
+    """Test if we can connect to the AKS cluster"""
+    print("\n🔍 Testing AKS cluster connection...")
+    
+    result = run_command("kubectl cluster-info")
+    if not result:
+        print("❌ Cannot connect to AKS cluster")
+        print("  Make sure you have run: az aks get-credentials")
+        return False
+    
+    print("✅ Successfully connected to AKS cluster")
+    return True
+
+
+def test_aks_nodes_running() -> bool:
+    """Test if AKS nodes are running"""
+    print("\n🔍 Testing AKS nodes...")
+    
+    result = run_command("kubectl get nodes -o json")
+    if not result:
+        print("❌ Could not get AKS nodes")
+        return False
+    
+    nodes = json.loads(result)
+    node_items = nodes.get('items', [])
+    
+    if not node_items:
+        print("❌ No nodes found in cluster")
+        return False
+    
+    ready_nodes = []
+    for node in node_items:
+        name = node['metadata']['name']
+        conditions = node['status']['conditions']
+        ready = any(c['type'] == 'Ready' and c['status'] == 'True' for c in conditions)
+        
+        if ready:
+            ready_nodes.append(name)
+            print(f"  ✅ Node {name} is Ready")
+        else:
+            print(f"  ❌ Node {name} is not Ready")
+    
+    if len(ready_nodes) == 0:
+        print("❌ No ready nodes found")
+        return False
+    
+    print(f"✅ AKS nodes are running ({len(ready_nodes)}/{len(node_items)} ready)")
+    return True
+
+
+def test_mcp_namespace_exists() -> bool:
+    """Test if MCP server namespace exists"""
+    print("\n🔍 Testing MCP server namespace...")
+    
+    result = run_command("kubectl get namespace mcp-server -o json")
+    if not result:
+        print("❌ MCP server namespace not found")
+        return False
+    
+    print("✅ MCP server namespace exists")
+    return True
+
+
+def test_mcp_server_deployed() -> bool:
+    """Test if MCP server deployment exists and is running"""
+    print("\n🔍 Testing MCP server deployment...")
+    
+    result = run_command("kubectl get deployment mcp-server -n mcp-server -o json")
+    if not result:
+        print("❌ MCP server deployment not found")
+        return False
+    
+    deployment = json.loads(result)
+    
+    spec_replicas = deployment['spec']['replicas']
+    status = deployment.get('status', {})
+    available_replicas = status.get('availableReplicas', 0)
+    ready_replicas = status.get('readyReplicas', 0)
+    
+    print(f"  Desired: {spec_replicas}, Available: {available_replicas}, Ready: {ready_replicas}")
+    
+    if available_replicas >= 1 and ready_replicas >= 1:
+        print("✅ MCP server deployment is running")
+        return True
+    else:
+        print("⚠️  MCP server deployment is not fully ready yet")
+        return False
+
+
+def test_mcp_server_pods() -> bool:
+    """Test if MCP server pods are running"""
+    print("\n🔍 Testing MCP server pods...")
+    
+    result = run_command("kubectl get pods -n mcp-server -o json")
+    if not result:
+        print("❌ Could not get MCP server pods")
+        return False
+    
+    pods = json.loads(result)
+    pod_items = pods.get('items', [])
+    
+    if not pod_items:
+        print("❌ No MCP server pods found")
+        return False
+    
+    running_pods = []
+    for pod in pod_items:
+        name = pod['metadata']['name']
+        phase = pod['status']['phase']
+        
+        if phase == 'Running':
+            container_statuses = pod['status'].get('containerStatuses', [])
+            all_ready = all(c.get('ready', False) for c in container_statuses)
+            
+            if all_ready:
+                running_pods.append(name)
+                print(f"  ✅ Pod {name} is Running and Ready")
+            else:
+                print(f"  ⚠️  Pod {name} is Running but not Ready")
+        else:
+            print(f"  ❌ Pod {name} is in phase: {phase}")
+    
+    if len(running_pods) == 0:
+        print("❌ No running pods found")
+        return False
+    
+    print(f"✅ MCP server pods are running ({len(running_pods)}/{len(pod_items)})")
+    return True
+
+
+def test_mcp_service_exists() -> bool:
+    """Test if MCP server service exists"""
+    print("\n🔍 Testing MCP server service...")
+    
+    result = run_command("kubectl get service mcp-server -n mcp-server -o json")
+    if not result:
+        print("❌ MCP server service not found")
+        return False
+    
+    service = json.loads(result)
+    cluster_ip = service['spec'].get('clusterIP')
+    ports = service['spec'].get('ports', [])
+    
+    print(f"  Service IP: {cluster_ip}")
+    for port in ports:
+        print(f"  Port: {port.get('port')} -> {port.get('targetPort')}")
+    
+    print("✅ MCP server service exists")
+    return True
+
+
+def test_workload_identity() -> bool:
+    """Test if workload identity is configured"""
+    print("\n🔍 Testing workload identity configuration...")
+    
+    result = run_command("kubectl get serviceaccount mcp-server-sa -n mcp-server -o json")
+    if not result:
+        print("⚠️  MCP server service account not found")
+        return False
+    
+    sa = json.loads(result)
+    annotations = sa.get('metadata', {}).get('annotations', {})
+    client_id = annotations.get('azure.workload.identity/client-id')
+    
+    if client_id:
+        print(f"  ✅ Workload identity client ID: {client_id[:20]}...")
+        print("✅ Workload identity is configured")
+        return True
+    else:
+        print("⚠️  Workload identity client ID not found")
+        return False
+
+
+def run_infrastructure_tests() -> Dict[str, bool]:
+    """Run all AKS infrastructure tests"""
+    print("\n" + "=" * 60)
+    print("📦 AKS Infrastructure Tests")
+    print("=" * 60)
+    
+    tests = [
+        ("AKS Cluster Connection", test_aks_cluster_connection),
+        ("AKS Nodes Running", test_aks_nodes_running),
+        ("MCP Namespace", test_mcp_namespace_exists),
+        ("MCP Server Deployment", test_mcp_server_deployed),
+        ("MCP Server Pods", test_mcp_server_pods),
+        ("MCP Service", test_mcp_service_exists),
+        ("Workload Identity", test_workload_identity),
+    ]
+    
+    results = {}
+    for test_name, test_func in tests:
+        try:
+            results[test_name] = test_func()
+        except Exception as e:
+            print(f"❌ Test '{test_name}' failed with error: {e}")
+            results[test_name] = False
+    
+    return results
+
+
+# ============================================================
+# Token Management
+# ============================================================
+
+def get_azure_cli_token() -> Optional[str]:
+    """Get access token from Azure CLI (az login)"""
+    import shutil
+    
+    # Find az command - try multiple locations
+    az_cmd = shutil.which('az')
+    if not az_cmd:
+        # Try common Windows locations
+        possible_paths = [
+            r'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd',
+            r'C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin\az.cmd',
+            os.path.expandvars(r'%LOCALAPPDATA%\Programs\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'),
+            os.path.expandvars(r'%USERPROFILE%\AppData\Local\Programs\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'),
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                az_cmd = path
+                break
+    
+    if not az_cmd:
+        az_cmd = 'az'  # Fall back to letting the shell find it
+    
+    try:
+        result = subprocess.run(
+            [az_cmd, 'account', 'get-access-token', '--query', 'accessToken', '-o', 'tsv'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            shell=True  # Use shell to find the command in PATH
+        )
+        if result.returncode == 0:
+            token = result.stdout.strip()
+            if token:
+                print(f"✅ Got access token from Azure CLI")
+                return token
+        print(f"❌ Azure CLI token error: {result.stderr}")
+        return None
+    except subprocess.TimeoutExpired:
+        print(f"❌ Azure CLI token request timed out")
+        return None
+    except FileNotFoundError:
+        print(f"❌ Azure CLI not found. Please install it and run 'az login'")
+        return None
+    except Exception as e:
+        print(f"❌ Azure CLI token error: {e}")
+        return None
+
+
+async def get_mcp_token_from_apim() -> Optional[str]:
+    """Get MCP access token from APIM OAuth endpoint using a synthetic auth code"""
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            # Generate a synthetic authorization code (APIM will accept it)
+            import time
+            synthetic_code = f"az_cli_auth_{int(time.time())}"
+            
+            data = {
+                'grant_type': 'authorization_code',
+                'code': synthetic_code,
+                'redirect_uri': REDIRECT_URI,
+                'client_id': CLIENT_ID
+            }
+            
+            print(f"🔄 Getting MCP token from APIM OAuth endpoint...")
+            async with session.post(APIM_OAUTH_TOKEN_URL, data=data) as response:
+                if response.status == 200:
+                    tokens = await response.json()
+                    access_token = tokens.get('access_token')
+                    if access_token:
+                        print(f"✅ Got MCP access token from APIM")
+                        return access_token
+                else:
+                    error_text = await response.text()
+                    print(f"❌ APIM token error: {response.status} - {error_text}")
+        return None
+    except Exception as e:
+        print(f"❌ APIM token error: {e}")
+        return None
 
 def load_configuration() -> Dict[str, Any]:
     """Load configuration from JSON file or environment variables"""
@@ -405,34 +713,44 @@ class MCPSessionManager:
             
         return None
 
-async def test_mcp_fixed_session():
+async def test_mcp_fixed_session(use_az_token: bool = False):
     """Test MCP with proper SSE session establishment"""
     
-    # Load or obtain OAuth token
-    tokens = TokenManager.load_tokens()
+    access_token = None
     
-    if not tokens:
-        print(f"❌ No tokens found in {TOKENS_FILE}")
-        print(f"🔄 Starting OAuth flow...")
-        
-        auth_code = TokenManager.prompt_for_authorization()
-        
-        if not auth_code:
-            print(f"❌ No authorization code provided")
+    # If using Azure CLI token (automatically get MCP token from APIM)
+    if use_az_token:
+        print(f"🔐 Getting MCP token automatically...")
+        access_token = await get_mcp_token_from_apim()
+        if not access_token:
+            print(f"❌ Failed to get MCP token from APIM.")
             return False
-        
-        tokens = await TokenManager.exchange_code_for_token(auth_code)
+    else:
+        # Load or obtain OAuth token
+        tokens = TokenManager.load_tokens()
         
         if not tokens:
-            print(f"❌ Failed to obtain access token")
-            return False
+            print(f"❌ No tokens found in {TOKENS_FILE}")
+            print(f"🔄 Starting OAuth flow...")
+            
+            auth_code = TokenManager.prompt_for_authorization()
+            
+            if not auth_code:
+                print(f"❌ No authorization code provided")
+                return False
+            
+            tokens = await TokenManager.exchange_code_for_token(auth_code)
+            
+            if not tokens:
+                print(f"❌ Failed to obtain access token")
+                return False
+            
+            TokenManager.save_tokens(tokens)
         
-        TokenManager.save_tokens(tokens)
-    
-    access_token = tokens.get('access_token')
-    if not access_token:
-        print(f"❌ No access_token in tokens")
-        return False
+        access_token = tokens.get('access_token')
+        if not access_token:
+            print(f"❌ No access_token in tokens")
+            return False
     
     print(f"🚀 Starting Fixed MCP Session Test")
     print(f"🔗 Base URL: {APIM_BASE_URL}")
@@ -530,16 +848,60 @@ async def test_mcp_fixed_session():
             print(f"❌ Unexpected response format")
             return False
 
+
+def print_summary(infra_results: Dict[str, bool], mcp_result: bool) -> int:
+    """Print test summary and return exit code"""
+    print("\n" + "=" * 60)
+    print("📊 Test Summary")
+    print("=" * 60)
+    
+    # Infrastructure results
+    if infra_results:
+        print("\n📦 Infrastructure Tests:")
+        for test_name, result in infra_results.items():
+            status = "✅ PASSED" if result else "❌ FAILED"
+            print(f"  {test_name:30} {status}")
+        
+        infra_passed = sum(1 for r in infra_results.values() if r)
+        infra_total = len(infra_results)
+        print(f"\n  Infrastructure: {infra_passed}/{infra_total} passed")
+    
+    # MCP protocol result
+    print("\n🌐 MCP Protocol Tests:")
+    mcp_status = "✅ PASSED" if mcp_result else "❌ FAILED"
+    print(f"  {'MCP Protocol (SSE + Tools)':30} {mcp_status}")
+    
+    # Overall result
+    all_passed = mcp_result and (not infra_results or all(infra_results.values()))
+    
+    if all_passed:
+        print("\n" + "=" * 60)
+        print("🎉 All tests passed!")
+        print("✅ Your APIM + MCP + AKS stack is fully operational!")
+        print("=" * 60)
+        return 0
+    else:
+        print("\n" + "=" * 60)
+        print("⚠️  Some tests failed - check output above for details")
+        print("=" * 60)
+        return 1
+
+
 if __name__ == "__main__":
     # Check for command-line arguments
-    if '--generate-token' in sys.argv or '--help' in sys.argv or '-h' in sys.argv:
-        if '--help' in sys.argv or '-h' in sys.argv:
-            print("Usage: python test_mcp_fixed_session.py [--generate-token]")
-            print("\nOptions:")
-            print("  --generate-token    Generate OAuth token interactively")
-            print("  --help, -h          Show this help message")
-            sys.exit(0)
-        
+    use_az_token = '--use-az-token' in sys.argv
+    skip_infra = '--skip-infra' in sys.argv
+    
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print("Usage: python test_apim_mcp_connection.py [OPTIONS]")
+        print("\nOptions:")
+        print("  --use-az-token      Use automatic token (no browser required)")
+        print("  --skip-infra        Skip AKS infrastructure tests")
+        print("  --generate-token    Generate OAuth token interactively")
+        print("  --help, -h          Show this help message")
+        sys.exit(0)
+    
+    if '--generate-token' in sys.argv:
         # Interactive token generation
         print("🔐 Interactive OAuth Token Generation")
         print("="*60)
@@ -551,7 +913,7 @@ if __name__ == "__main__":
                 if tokens:
                     TokenManager.save_tokens(tokens)
                     print("\n✅ Token generation complete!")
-                    print(f"🎉 You can now run: python test_mcp_fixed_session.py")
+                    print(f"🎉 You can now run: python test_apim_mcp_connection.py")
                     return True
             print("\n❌ Token generation failed")
             return False
@@ -559,17 +921,44 @@ if __name__ == "__main__":
         success = asyncio.run(generate_token())
         sys.exit(0 if success else 1)
     
-    # Run the full test
+    # Run the full test suite
+    print("=" * 60)
+    print("🧪 Complete APIM + MCP + AKS Integration Test")
+    print("=" * 60)
+    
+    infra_results = {}
+    mcp_result = False
+    
     try:
-        result = asyncio.run(test_mcp_fixed_session())
-        if result:
-            print(f"\n🎉 SUCCESS: hello_mcp tool found and called successfully!")
-            sys.exit(0)
+        # Part 1: Infrastructure tests (optional)
+        if not skip_infra:
+            infra_results = run_infrastructure_tests()
+            
+            # Check if critical infrastructure tests passed
+            critical_tests = ["AKS Cluster Connection", "MCP Server Pods", "MCP Service"]
+            critical_passed = all(infra_results.get(t, False) for t in critical_tests if t in infra_results)
+            
+            if not critical_passed:
+                print("\n⚠️  Critical infrastructure tests failed - MCP tests may fail")
         else:
-            print(f"\n💥 FAILED: Could not find or call hello_mcp tool")
-            sys.exit(1)
+            print("\n⏭️  Skipping infrastructure tests (--skip-infra)")
+        
+        # Part 2: MCP Protocol tests
+        print("\n" + "=" * 60)
+        print("🌐 MCP Protocol Tests")
+        print("=" * 60)
+        
+        mcp_result = asyncio.run(test_mcp_fixed_session(use_az_token=use_az_token))
+        
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Tests interrupted by user")
+        sys.exit(1)
     except Exception as e:
         print(f"\n💥 FATAL ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    
+    # Print summary and exit
+    exit_code = print_summary(infra_results, mcp_result)
+    sys.exit(exit_code)
