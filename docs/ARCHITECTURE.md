@@ -7,6 +7,11 @@ This document provides comprehensive Mermaid diagrams for the AI Agents with AKS
 1. [Component Architecture Diagram](#component-architecture-diagram)
 2. [Detailed Component Diagram](#detailed-component-diagram)
 3. [Memory Architecture](#memory-architecture)
+   - [Memory Components](#memory-components)
+   - [Facts Memory - Fabric IQ Integration](#facts-memory---fabric-iq-integration)
+   - [Domain Ontologies](#domain-ontologies)
+   - [Cross-Domain Reasoning](#cross-domain-reasoning)
+   - [Memory Flow](#memory-flow)
 4. [Deployment Architecture](#deployment-architecture)
 5. [Sequence Diagrams](#sequence-diagrams)
    - [Agent Authentication Flow](#agent-authentication-flow)
@@ -183,20 +188,20 @@ graph TB
 
 ## Memory Architecture
 
-The MCP Agent uses a composite memory system combining short-term session memory with long-term persistent memory for semantic reasoning:
+The MCP Agent uses a composite memory system combining short-term session memory, long-term persistent memory, and ontology-grounded facts memory for semantic reasoning:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      CompositeMemory                            │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────┐    ┌─────────────────────────────────┐ │
-│  │  Short-Term Memory  │    │       Long-Term Memory          │ │
-│  │    (CosmosDB)       │    │   (AI Search / FoundryIQ)       │ │
-│  │  - Session-based    │    │   - Persistent storage          │ │
-│  │  - TTL support      │    │   - Cross-session retrieval     │ │
-│  │  - Fast access      │    │   - Hybrid search               │ │
-│  └─────────────────────┘    └─────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CompositeMemory                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────────┐ │
+│  │  Short-Term Memory  │  │   Long-Term Memory  │  │     Facts Memory        │ │
+│  │    (CosmosDB)       │  │   (AI Search)       │  │    (Fabric IQ)          │ │
+│  │  - Session-based    │  │  - Persistent       │  │  - Ontology-grounded    │ │
+│  │  - TTL support      │  │  - Cross-session    │  │  - Cross-domain         │ │
+│  │  - Fast access      │  │  - Hybrid search    │  │  - Entity relationships │ │
+│  └─────────────────────┘  └─────────────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Memory Components
@@ -206,6 +211,7 @@ graph TB
     subgraph "Agent Layer"
         Agent[MCP Agent<br/>mcp_agents.py]
         Tools[MCP Tools<br/>store_memory, recall_memory]
+        FactsTools[Facts Tools<br/>search_facts, cross_domain_analysis]
     end
 
     subgraph "Memory Abstraction Layer"
@@ -221,6 +227,11 @@ graph TB
             FoundryIQ[FoundryIQMemory<br/>Knowledge graph]
             LTMFeatures[Features:<br/>• Cross-session retrieval<br/>• Hybrid search<br/>• Entity extraction]
         end
+        
+        subgraph "Facts Memory"
+            FactsMemory[FactsMemory<br/>Ontology-grounded facts]
+            FMFeatures[Features:<br/>• Domain ontologies<br/>• Entity relationships<br/>• Cross-domain reasoning]
+        end
     end
 
     subgraph "Storage Layer"
@@ -234,6 +245,11 @@ graph TB
             SearchIndex[long_term_memory<br/>Search Index]
         end
         
+        subgraph "Microsoft Fabric IQ"
+            Ontology[Ontology<br/>Entity Types & Relationships]
+            OneLake[OneLake<br/>Unified Data Storage]
+        end
+        
         subgraph "Azure AI Foundry"
             EmbeddingModel[text-embedding-3-large<br/>3072 dimensions]
             ChatModel[gpt-5.2-chat<br/>Intent Analysis]
@@ -241,7 +257,9 @@ graph TB
     end
 
     Agent --> Tools
+    Agent --> FactsTools
     Tools --> CompositeMemory
+    FactsTools --> FactsMemory
     CompositeMemory --> CosmosMemory
     CompositeMemory --> AISearchMemory
     CompositeMemory --> FoundryIQ
@@ -252,8 +270,12 @@ graph TB
     
     AISearchMemory --> SearchIndex
     
+    FactsMemory --> Ontology
+    FactsMemory --> OneLake
+    
     CosmosMemory --> EmbeddingModel
     AISearchMemory --> EmbeddingModel
+    FactsMemory --> EmbeddingModel
     Agent --> ChatModel
 
     style Agent fill:#e1f5ff
@@ -261,6 +283,119 @@ graph TB
     style CosmosMemory fill:#e8f5e9
     style AISearchMemory fill:#fce4ec
     style FoundryIQ fill:#f3e5f5
+    style FactsMemory fill:#e3f2fd
+```
+
+### Facts Memory - Fabric IQ Integration
+
+The Facts Memory provider integrates with [Microsoft Fabric IQ](https://learn.microsoft.com/en-us/fabric/iq/overview) to provide ontology-grounded facts for AI agent reasoning. It organizes data according to business language and exposes it with consistent semantic meaning.
+
+```mermaid
+graph TB
+    subgraph "Facts Memory Architecture"
+        FactsMemory[FactsMemory Provider]
+        
+        subgraph "Domain Ontologies"
+            CustomerOntology[Customer Domain<br/>Churn Analysis]
+            DevOpsOntology[DevOps Domain<br/>CI/CD Pipelines]
+            UserMgmtOntology[User Management<br/>Authentication]
+        end
+        
+        subgraph "Entity Types"
+            CustomerEntities[Customer<br/>Transaction<br/>Engagement<br/>ChurnPrediction]
+            PipelineEntities[Pipeline<br/>PipelineRun<br/>Deployment<br/>Cluster]
+            UserEntities[User<br/>Session<br/>AuthEvent<br/>AccessLog]
+        end
+        
+        subgraph "Fact Types"
+            Observations[Observations<br/>Current state facts]
+            Predictions[Predictions<br/>ML-derived insights]
+            Derived[Derived Facts<br/>Cross-domain reasoning]
+        end
+    end
+    
+    subgraph "Fabric IQ Components"
+        OntologyItem[Ontology Item<br/>Entity & Relationship Definitions]
+        GraphFabric[Graph in Fabric<br/>Relationship Traversal]
+        DataAgent[Data Agent<br/>Conversational Q&A]
+    end
+    
+    subgraph "OneLake"
+        Lakehouse[Lakehouse Tables]
+        Eventhouse[Eventhouse Streams]
+        SemanticModel[Power BI Semantic Model]
+    end
+
+    FactsMemory --> CustomerOntology
+    FactsMemory --> DevOpsOntology
+    FactsMemory --> UserMgmtOntology
+    
+    CustomerOntology --> CustomerEntities
+    DevOpsOntology --> PipelineEntities
+    UserMgmtOntology --> UserEntities
+    
+    CustomerEntities --> Observations
+    PipelineEntities --> Observations
+    UserEntities --> Observations
+    
+    Observations --> Predictions
+    Predictions --> Derived
+    
+    OntologyItem --> Lakehouse
+    OntologyItem --> Eventhouse
+    OntologyItem --> SemanticModel
+    
+    GraphFabric --> OntologyItem
+    DataAgent --> OntologyItem
+
+    style FactsMemory fill:#e3f2fd
+    style CustomerOntology fill:#ffecb3
+    style DevOpsOntology fill:#c8e6c9
+    style UserMgmtOntology fill:#f3e5f5
+```
+
+### Domain Ontologies
+
+| Domain | Entity Types | Use Cases |
+|--------|--------------|-----------|
+| **Customer** | Customer, Transaction, Engagement, ChurnPrediction | Customer churn analysis, predictive modeling, at-risk identification |
+| **DevOps** | Pipeline, PipelineRun, Deployment, Cluster | CI/CD monitoring, failure analysis, deployment tracking |
+| **User Management** | User, Session, AuthEvent, AccessLog | Security monitoring, access patterns, authentication analysis |
+
+### Fact Types
+
+| Fact Type | Description | Example |
+|-----------|-------------|---------|
+| `observation` | Current state of an entity | "Pipeline 'api-gateway' has 93% success rate" |
+| `prediction` | ML-derived forecast | "Customer 'Liam' has 82% churn risk" |
+| `derived` | Cross-domain insight | "Deployment failures correlate with high-risk customers" |
+| `rule` | Business rule fact | "MFA required for admin access" |
+
+### Cross-Domain Reasoning
+
+Facts Memory enables cross-domain analysis to find connections between different business domains:
+
+```mermaid
+graph LR
+    subgraph "Customer Domain"
+        HighRiskCustomer[High-Risk Customer<br/>82% churn risk]
+    end
+    
+    subgraph "DevOps Domain"
+        FailedDeployment[Failed Deployment<br/>user-service outage]
+    end
+    
+    subgraph "User Management"
+        SecurityAlert[Security Alert<br/>Suspicious login]
+    end
+    
+    HighRiskCustomer -->|"Impact Analysis"| FailedDeployment
+    FailedDeployment -->|"Service Affected"| SecurityAlert
+    SecurityAlert -->|"User Correlation"| HighRiskCustomer
+    
+    style HighRiskCustomer fill:#ffcdd2
+    style FailedDeployment fill:#fff9c4
+    style SecurityAlert fill:#f3e5f5
 ```
 
 ### Memory Flow
@@ -271,6 +406,7 @@ sequenceDiagram
     participant CM as CompositeMemory
     participant STM as Short-Term Memory<br/>(CosmosDB)
     participant LTM as Long-Term Memory<br/>(AI Search)
+    participant FM as Facts Memory<br/>(Fabric IQ)
     participant Embed as Embedding Model
 
     Note over Agent,Embed: Store Memory Flow
@@ -299,6 +435,18 @@ sequenceDiagram
         LTM-->>CM: long-term results
     end
     
+    Note over Agent,Embed: Facts Retrieval Flow
+    Agent->>FM: search_facts(query, domain)
+    FM->>Embed: get_embedding(query)
+    Embed-->>FM: query embedding
+    FM->>FM: semantic_search(facts)
+    FM-->>Agent: ontology-grounded facts
+    
+    Note over Agent,Embed: Cross-Domain Analysis
+    Agent->>FM: cross_domain_query(query, source, target)
+    FM->>FM: traverse_relationships()
+    FM-->>Agent: cross-domain connections
+    
     CM->>CM: merge & deduplicate results
     CM-->>Agent: ranked memory results
 ```
@@ -312,6 +460,15 @@ sequenceDiagram
 | `CONVERSATION` | Chat messages | Session history |
 | `CONTEXT` | General context | User preferences, state |
 | `EMBEDDING` | Raw embeddings | Vector operations |
+
+### Fact Types (Fabric IQ)
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `observation` | Current state facts | "Pipeline has 93% success rate" |
+| `prediction` | ML-derived forecasts | "Customer has 82% churn risk" |
+| `derived` | Cross-domain insights | Correlation analysis |
+| `rule` | Business rules | Policy enforcement |
 
 ### CosmosDB Container Schema
 
@@ -331,6 +488,28 @@ sequenceDiagram
 }
 ```
 
+### Fabric IQ Fact Schema
+
+**Facts in FactsMemory:**
+```json
+{
+  "id": "fact-churn-cust-123",
+  "fact_type": "prediction",
+  "domain": "customer",
+  "statement": "Customer 'Liam' has 82% churn risk",
+  "confidence": 0.82,
+  "evidence": ["cust-123", "tx-456"],
+  "context": {
+    "segment": "business",
+    "risk_level": "critical",
+    "tenure_months": 8
+  },
+  "embedding": [0.123, ...],
+  "created_at": "ISO timestamp",
+  "valid_until": "ISO timestamp"
+}
+```
+
 ### MCP Memory Tools
 
 | Tool | Description |
@@ -341,19 +520,40 @@ sequenceDiagram
 | `clear_session_memory` | Clear session memory |
 | `next_best_action` | Analyze task, find similar tasks, generate plan |
 
+### MCP Facts Memory Tools (Fabric IQ)
+
+| Tool | Description |
+|------|-------------|
+| `search_facts` | Semantic search across all domain ontologies |
+| `get_customer_churn_facts` | Customer churn analysis facts and predictions |
+| `get_pipeline_health_facts` | CI/CD pipeline health and failure analysis |
+| `get_user_security_facts` | User security alerts and authentication patterns |
+| `cross_domain_analysis` | Cross-domain reasoning and correlation |
+| `get_facts_memory_stats` | Facts memory statistics by domain |
+
+### Environment Variables
+
+**Facts Memory Configuration:**
+```bash
+FABRIC_ENDPOINT=https://<workspace>.fabric.microsoft.com
+FABRIC_WORKSPACE_ID=<workspace-id>
+FABRIC_ONTOLOGY_NAME=agent-ontology
+```
+
 ---
 
 ## Deployment Architecture
 
-Infrastructure and deployment view:
+Infrastructure and deployment view with Microsoft Fabric integration:
 
 ```mermaid
 graph TB
     subgraph "Azure Subscription"
         subgraph "Resource Group"
             subgraph "Network Layer"
-                VNet[Virtual Network<br/>Optional]
-                SystemSubnet[System Subnet<br/>10.240.0.0/16]
+                VNet[Virtual Network<br/>10.0.0.0/16]
+                PrivateSubnet[Private Endpoints Subnet<br/>10.0.1.0/24]
+                AppSubnet[App Subnet<br/>10.0.2.0/24]
             end
             
             subgraph "Compute Layer"
@@ -374,6 +574,29 @@ graph TB
                 BlobService[Blob Service<br/>snippets container]
             end
             
+            subgraph "Memory Layer"
+                CosmosDB[CosmosDB NoSQL<br/>Vector Search]
+                AISearch[Azure AI Search<br/>Semantic Search]
+            end
+            
+            subgraph "AI Layer"
+                Foundry[Azure AI Foundry<br/>GPT + Embeddings]
+            end
+            
+            subgraph "Fabric Layer"
+                FabricCapacity[Fabric Capacity<br/>F2 SKU]
+                OneLake[OneLake<br/>Ontology Storage]
+                FabricIQ[Fabric IQ<br/>Facts Engine]
+            end
+            
+            subgraph "Private Endpoints"
+                PE_Storage[Storage PE]
+                PE_Cosmos[CosmosDB PE]
+                PE_Search[AI Search PE]
+                PE_Foundry[Foundry PE]
+                PE_Fabric[Fabric PE<br/>OneLake DFS/Blob]
+            end
+            
             subgraph "Monitoring Layer"
                 LogWorkspace[Log Analytics Workspace]
                 AppInsights[Application Insights]
@@ -388,7 +611,7 @@ graph TB
     end
 
     AKS --> SystemNodePool
-    SystemNodePool --> SystemSubnet
+    SystemNodePool --> AppSubnet
     
     AKS --> AKSIdentity
     AKS --> ACR
@@ -396,21 +619,86 @@ graph TB
     APIM --> AKS
     APIM --> APIMIdentity
     
-    SystemNodePool --> StorageAcct
-    StorageAcct --> BlobService
+    %% Private Endpoints in dedicated subnet
+    PE_Storage --> PrivateSubnet
+    PE_Cosmos --> PrivateSubnet
+    PE_Search --> PrivateSubnet
+    PE_Foundry --> PrivateSubnet
+    PE_Fabric --> PrivateSubnet
     
-    MCPIdentity --> BlobService
+    %% MCP Pod connections via Private Endpoints
+    MCPIdentity --> PE_Storage
+    MCPIdentity --> PE_Cosmos
+    MCPIdentity --> PE_Search
+    MCPIdentity --> PE_Foundry
+    MCPIdentity --> PE_Fabric
+    
+    %% Fabric connections
+    PE_Fabric --> OneLake
+    OneLake --> FabricCapacity
+    FabricIQ --> FabricCapacity
     
     AKS --> AppInsights
     AppInsights --> LogWorkspace
-    
-    ACR --> AKSIdentity
 
     style AKS fill:#326ce5,color:#fff
     style SystemNodePool fill:#326ce5,color:#fff
     style APIM fill:#0078d4,color:#fff
-    style ACR fill:#0078d4,color:#fff
-    style StorageAcct fill:#0078d4,color:#fff
+    style FabricCapacity fill:#f25022,color:#fff
+    style OneLake fill:#f25022,color:#fff
+    style FabricIQ fill:#f25022,color:#fff
+    style PE_Fabric fill:#ffb900,color:#000
+```
+
+### Fabric Infrastructure Details
+
+The Microsoft Fabric integration provides ontology-grounded facts for AI agents:
+
+| Component | Purpose | Private Link DNS |
+|-----------|---------|-----------------|
+| Fabric Capacity | Compute for Fabric workloads | N/A (management plane) |
+| OneLake DFS | Data File System API for ontologies | `privatelink.dfs.fabric.microsoft.com` |
+| OneLake Blob | Blob API for file access | `privatelink.blob.fabric.microsoft.com` |
+| Fabric API | REST API access | `privatelink.api.fabric.microsoft.com` |
+
+### Private Endpoint Architecture
+
+```mermaid
+graph LR
+    subgraph "AKS Cluster"
+        MCP[MCP Server Pod]
+    end
+    
+    subgraph "Private DNS Zones"
+        DNS1[privatelink.dfs.fabric.microsoft.com]
+        DNS2[privatelink.blob.fabric.microsoft.com]
+        DNS3[privatelink.api.fabric.microsoft.com]
+    end
+    
+    subgraph "Private Endpoints"
+        PE[Fabric Private Endpoint]
+    end
+    
+    subgraph "Microsoft Fabric"
+        OneLake[OneLake Storage]
+        Workspace[Fabric Workspace]
+    end
+    
+    MCP -->|DNS Query| DNS1
+    MCP -->|DNS Query| DNS2
+    MCP -->|DNS Query| DNS3
+    
+    DNS1 -->|Resolve to| PE
+    DNS2 -->|Resolve to| PE
+    DNS3 -->|Resolve to| PE
+    
+    PE -->|Private Link| OneLake
+    PE -->|Private Link| Workspace
+    
+    style MCP fill:#326ce5,color:#fff
+    style PE fill:#ffb900,color:#000
+    style OneLake fill:#f25022,color:#fff
+    style Workspace fill:#f25022,color:#fff
 ```
 
 ---

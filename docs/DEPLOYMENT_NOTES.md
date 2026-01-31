@@ -2,114 +2,270 @@
 
 ## Infrastructure Successfully Deployed! 🎉
 
-### Deployed Resources
+**Last Updated:** January 31, 2026  
+**Environment:** `<your-environment-name>`  
+**Region:** Configurable (default: eastus2)
 
-✅ **AKS Cluster**: Kubernetes cluster with system node pool  
-✅ **Container Registry**: Azure Container Registry  
-✅ **Storage Account**: Azure Blob Storage  
-✅ **API Management**: APIM with OAuth support  
-✅ **Virtual Network**: Optional VNet integration  
-✅ **Log Analytics**: Centralized logging  
-✅ **Application Insights**: Application monitoring  
-✅ **Managed Identities**: For AKS, MCP workload, and Entra App  
+---
 
-### Configuration Notes
+## Deployed Resources
 
-#### GPU Node Pool Status
-⚠️ **GPU nodes are DISABLED** by default. This project focuses on MCP server deployment without language model hosting.
+### Core Infrastructure
+| Resource | Name | Status |
+|----------|------|--------|
+| Resource Group | `rg-<env-name>` | ✅ Deployed |
+| AKS Cluster | `aks-<unique-id>` | ✅ Running (K8s 1.32+, 2 nodes) |
+| Container Registry | `<registry>.azurecr.io` | ✅ Ready |
+| Storage Account | `st<unique-id>` | ✅ Private (blob-private-endpoint) |
+| API Management | `apim-<unique-id>` | ✅ Configured |
+| Virtual Network | `vnet-<unique-id>` | ✅ VNet integration enabled |
+| Log Analytics | `log-<unique-id>` | ✅ Centralized logging |
+| Application Insights | Integrated | ✅ Application monitoring |
+| Managed Identities | AKS, MCP workload, Entra App | ✅ Configured |
 
-**Configuration Changes Made**:
-1. **Kubernetes Version**: Updated to officially supported version
-2. **Service CIDR**: Changed from `10.0.0.0/16` to `10.240.0.0/16` (avoid VNet overlap)
-3. **Subnet Delegation**: Removed `Microsoft.App/environments` delegation (AKS incompatible)
-4. **GPU Node Pool**: Disabled by default with `enableGpuNodePool` parameter
+### AI Services
+| Resource | Endpoint | Status |
+|----------|----------|--------|
+| Azure AI Foundry | `https://<ai-services>.services.ai.azure.com` | ✅ Ready |
+| AI Search | `https://<search>.search.windows.net` | ✅ Ready |
+| CosmosDB | `https://<cosmos>.documents.azure.com:443/` | ✅ Ready |
 
-### Next Steps
+### MCP Server
+| Component | Status | Details |
+|-----------|--------|---------|
+| Docker Image | ✅ Pushed | `<registry>.azurecr.io/mcp-server:latest` |
+| K8s Deployment | ✅ Running | 2 replicas healthy |
+| LoadBalancer IP | ✅ Assigned | `<public-ip>` |
+| Health Endpoint | ✅ Accessible | `http://<public-ip>/health` |
+| Workload Identity | ✅ Configured | Using managed identity |
+| AI Agent Client | ✅ Initialized | Connected to Azure AI Foundry |
 
-Now that infrastructure is deployed, you need to manually complete these steps:
+### Fabric IQ (Optional)
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `fabricEnabled` | `false` | Fabric infrastructure disabled by default |
+| Switch to Fabric | Set `FABRIC_ENABLED=true` | Enable when Fabric becomes available |
 
-#### 1. Get AKS Credentials
-```powershell
-$aksName = azd env get-values | Select-String "AKS_CLUSTER_NAME" | ForEach-Object { ($_ -split '=')[1].Trim('"') }
-$rgName = azd env get-values | Select-String "AZURE_RESOURCE_GROUP_NAME" | ForEach-Object { ($_ -split '=')[1].Trim('"') }
-az aks get-credentials --resource-group $rgName --name $aksName --overwrite-existing
+---
+
+## Configuration Details
+
+### Environment Variables (Kubernetes Deployment)
+
+```yaml
+# Core Settings
+AZURE_STORAGE_ACCOUNT_URL: https://<storage-account>.blob.core.windows.net/
+AZURE_CLIENT_ID: <managed-identity-client-id>
+
+# Azure AI Agent SDK
+FOUNDRY_PROJECT_ENDPOINT: https://<ai-services>.services.ai.azure.com/api/projects/<project>
+AZURE_AI_PROJECT_ENDPOINT: https://<ai-services>.services.ai.azure.com/api/projects/<project>
+FOUNDRY_MODEL_DEPLOYMENT_NAME: <model-deployment-name>
+AZURE_AI_MODEL_DEPLOYMENT_NAME: <model-deployment-name>
+EMBEDDING_MODEL_DEPLOYMENT_NAME: text-embedding-3-large
+
+# Data Services
+COSMOSDB_ENDPOINT: https://<cosmos>.documents.azure.com:443/
+COSMOSDB_DATABASE_NAME: mcpdb
+AZURE_SEARCH_ENDPOINT: https://<search>.search.windows.net
+AZURE_SEARCH_INDEX_NAME: task-instructions
+
+# Fabric IQ (disabled by default)
+FABRIC_ENABLED: false
+ONTOLOGY_CONTAINER_NAME: ontologies
 ```
 
-#### 2. Deploy MCP Server to Kubernetes
-```powershell
-# Deploy the MCP server
-kubectl apply -f k8s/mcp-server-deployment.yaml
+### Network Security
 
-# Verify deployment
-kubectl get pods
-kubectl get services
+- **Storage Account**: Public access disabled, accessible only via private endpoint
+- **AKS Pods**: Access storage over private network within VNet
+- **Private Endpoints**: blob-private-endpoint, queue-private-endpoint
+
+---
+
+## MCP Server Endpoints
+
+| Endpoint | URL | Status |
+|----------|-----|--------|
+| Health Check | `http://<public-ip>/health` | ✅ Working |
+| Root | `http://<public-ip>/` | ✅ Working |
+| MCP SSE | `http://<public-ip>/runtime/webhooks/mcp/sse` | ✅ Available |
+| MCP Message | `http://<public-ip>/runtime/webhooks/mcp/message` | ✅ Available |
+| Agent Chat | `http://<public-ip>/agent/chat` | ⚠️ SDK compatibility issue |
+| Agent Chat Stream | `http://<public-ip>/agent/chat/stream` | ⚠️ SDK compatibility issue |
+
+---
+
+## Quick Commands
+
+### Get AKS Credentials
+```powershell
+# Replace with your resource group and cluster name
+az aks get-credentials --resource-group <resource-group> --name <aks-cluster-name> --admin --overwrite-existing
 ```
 
-#### 3. Test the Deployment
+### Check Deployment Status
 ```powershell
-# Run MCP endpoint tests
-python tests/test_apim_mcp_connection.py
-
-# Test MCP use cases
-python tests/test_apim_mcp_use_cases.py
+kubectl get pods -n mcp-server
+kubectl get svc -n mcp-server
+kubectl logs -n mcp-server deployment/mcp-server --tail=50
 ```
 
-#### 4. Get APIM Endpoints
+### Test Health Endpoint
 ```powershell
-# Get APIM gateway URL
-$apimName = azd env get-values | Select-String "APIM_NAME" | ForEach-Object { ($_ -split '=')[1].Trim('"') }
-az apim show --name $apimName --resource-group $rgName --query "gatewayUrl" --output tsv
-
-# OAuth endpoints will be:
-# - Authorization: https://<apim-name>.azure-api.net/oauth/authorize
-# - Token: https://<apim-name>.azure-api.net/oauth/token
-# - MCP SSE: https://<apim-name>.azure-api.net/mcp/sse
-# - MCP Message: https://<apim-name>.azure-api.net/mcp/message
+$LB_IP = kubectl get svc -n mcp-server mcp-server-loadbalancer -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+Invoke-RestMethod -Uri "http://$LB_IP/health" -Method GET
 ```
 
-### Troubleshooting
+### Redeploy MCP Server
+```powershell
+kubectl apply -f k8s/mcp-server-deployment-configured.yaml
+kubectl rollout restart deployment/mcp-server -n mcp-server
+kubectl rollout status deployment/mcp-server -n mcp-server
+```
 
-#### If azd up shows storage account error
-This is a known transient error that doesn't affect the deployed resources. All critical resources are deployed successfully. You can safely proceed with the next steps.
+### Upload Ontologies to Storage
+```powershell
+# Get storage account name from your deployment
+$STORAGE_ACCOUNT = "<your-storage-account>"
 
-#### If Docker is not running
+# Temporarily enable public access
+az storage account update --name $STORAGE_ACCOUNT --public-network-access Enabled
+$myIP = (Invoke-RestMethod -Uri "https://api.ipify.org")
+az storage account network-rule add --account-name $STORAGE_ACCOUNT --ip-address $myIP
+
+# Upload files
+az storage blob upload --account-name $STORAGE_ACCOUNT --container-name ontologies --name myfile.json --file ./myfile.json --auth-mode login
+
+# Restore security
+az storage account update --name $STORAGE_ACCOUNT --public-network-access Disabled
+```
+
+---
+
+## Switching to Fabric Mode
+
+When Microsoft Fabric becomes available in your tenant:
+
+### 1. Enable Fabric Infrastructure
+```powershell
+azd env set FABRIC_ENABLED true
+azd provision
+```
+
+### 2. Update Kubernetes Deployment
+Update the `FABRIC_ENABLED` environment variable in `k8s/mcp-server-deployment-configured.yaml`:
+```yaml
+- name: FABRIC_ENABLED
+  value: "true"
+- name: FABRIC_ENDPOINT
+  value: "<your-fabric-endpoint>"
+- name: FABRIC_WORKSPACE_ID
+  value: "<your-workspace-id>"
+```
+
+### 3. Redeploy
+```powershell
+kubectl apply -f k8s/mcp-server-deployment-configured.yaml
+kubectl rollout restart deployment/mcp-server -n mcp-server
+```
+
+The FactsMemory provider will automatically switch from Azure Blob Storage to Fabric IQ OneLake.
+
+---
+
+## Known Issues
+
+### 1. Agent Chat SDK Compatibility
+**Status:** ⚠️ Needs Fix  
+**Description:** The `/agent/chat` endpoint returns error: `'AzureAIAgentClient' object has no attribute 'run'`  
+**Root Cause:** The `agent_framework` SDK interface changed; code uses `.run()` but SDK expects different method.  
+**Workaround:** Use MCP protocol endpoints (`/runtime/webhooks/mcp/sse`, `/runtime/webhooks/mcp/message`) instead.
+
+### 2. Ontology File Format
+**Status:** ℹ️ Documentation  
+**Description:** Task instruction files in `task_instructions/` are for AI Search long-term memory, not FactsMemory ontologies.  
+**Impact:** FactsMemory falls back to sample data since no properly formatted ontology files exist.  
+**Fix:** Create ontology JSON files with `entities`, `relationships`, and `facts` arrays for FactsMemory.
+
+---
+
+## Troubleshooting
+
+### If azd up shows storage account error
+Transient error that doesn't affect deployed resources. Proceed with next steps.
+
+### If Docker is not running
 ```powershell
 Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-# Wait for Docker Desktop to start (~30-60 seconds)
 docker info  # Verify Docker is running
 ```
 
-#### If APIM soft-delete error occurs
+### If APIM soft-delete error occurs
 ```powershell
-az apim deletedservice purge --service-name <your-apim-name> --location eastus
+az apim deletedservice purge --service-name <your-apim-name> --location eastus2
 ```
 
-#### If you need to restart deployment
+### If pods are in CrashLoopBackOff
 ```powershell
-# Delete resource group
-az group delete --name <your-resource-group> --yes --no-wait
-
-# Wait for deletion complete, then redeploy
-azd up
+kubectl logs -n mcp-server deployment/mcp-server --previous
+kubectl describe pod -n mcp-server <pod-name>
 ```
 
-### What This Deployment Provides
+### If storage access is denied from pods
+Verify the managed identity has `Storage Blob Data Contributor` role on the storage account.
 
-✅ MCP Server deployment on AKS  
-✅ API Management OAuth authentication  
+---
+
+## Architecture
+
+```
+                    ┌─────────────────────────────────────────────────────────────┐
+                    │                    Azure Resource Group                      │
+                    │                     rg-<env-name>                             │
+                    └─────────────────────────────────────────────────────────────┘
+                                                 │
+         ┌───────────────────────────────────────┼───────────────────────────────────────┐
+         │                                       │                                       │
+         ▼                                       ▼                                       ▼
+┌─────────────────┐               ┌───────────────────────────┐               ┌─────────────────┐
+│  Azure API      │               │     AKS Cluster           │               │  Azure AI       │
+│  Management     │◄─────────────►│   (2 nodes, K8s 1.32+)     │◄─────────────►│  Foundry        │
+│  (OAuth)        │               │                           │               │  (GPT model)    │
+└─────────────────┘               └───────────────────────────┘               └─────────────────┘
+                                               │
+                    ┌──────────────────────────┼──────────────────────────┐
+                    │                          │                          │
+                    ▼                          ▼                          ▼
+         ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+         │  MCP Server     │       │  Storage Account│       │  CosmosDB       │
+         │  Pods (2x)      │◄─────►│  (Private EP)   │       │  (mcpdb)        │
+         │                 │       │                 │       │                 │
+         └─────────────────┘       └─────────────────┘       └─────────────────┘
+```
+
+---
+
+## What This Deployment Provides
+
+✅ MCP Server deployment on AKS with 2 replicas  
+✅ Azure AI Agent Framework integration  
+✅ Workload Identity for secure Azure service access  
+✅ Private network storage via blob-private-endpoint  
+✅ API Management with OAuth authentication  
 ✅ MCP protocol endpoints (/sse, /message)  
-✅ Tool execution (hello_mcp, save_snippet, get_snippet)  
-✅ Azure Storage integration with managed identity  
-✅ Application Insights monitoring  
+✅ Health monitoring and logging  
+✅ Switchable Fabric IQ integration (disabled by default)
 
-### Additional Resources
+---
+
+## Additional Resources
 
 - [README.md](../README.md) - Main documentation
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture diagrams
 - [TEST_CONFIGURATION.md](./TEST_CONFIGURATION.md) - Testing setup
+- [TEST_RESULTS.md](./TEST_RESULTS.md) - Test results
 
 ---
 
-## Summary
-
-Your infrastructure is **successfully deployed** and ready for MCP server deployment!
+**Summary:** Infrastructure is **successfully deployed** and MCP server is running! 🎉

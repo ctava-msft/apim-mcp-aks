@@ -20,6 +20,11 @@ $cosmosDbEndpoint = $envValues.COSMOSDB_ENDPOINT.Trim('"')
 $cosmosDbDatabaseName = $envValues.COSMOSDB_DATABASE_NAME.Trim('"')
 $azureSearchEndpoint = $envValues.AZURE_SEARCH_ENDPOINT.Trim('"')
 $azureSearchIndexName = $envValues.AZURE_SEARCH_INDEX_NAME.Trim('"')
+# Fabric configuration
+$fabricEnabled = $envValues.FABRIC_ENABLED.Trim('"')
+$fabricCapacityName = $envValues.FABRIC_CAPACITY_NAME.Trim('"')
+$fabricOneLakeDfsEndpoint = $envValues.FABRIC_ONELAKE_DFS_ENDPOINT.Trim('"')
+$fabricOneLakeBlobEndpoint = $envValues.FABRIC_ONELAKE_BLOB_ENDPOINT.Trim('"')
 
 Write-Host "  AKS Cluster: $aksName" -ForegroundColor White
 Write-Host "  Resource Group: $rgName" -ForegroundColor White
@@ -32,6 +37,9 @@ Write-Host "  CosmosDB Endpoint: $cosmosDbEndpoint" -ForegroundColor White
 Write-Host "  CosmosDB Database: $cosmosDbDatabaseName" -ForegroundColor White
 Write-Host "  AI Search Endpoint: $azureSearchEndpoint" -ForegroundColor White
 Write-Host "  AI Search Index: $azureSearchIndexName" -ForegroundColor White
+Write-Host "  Fabric Enabled: $fabricEnabled" -ForegroundColor White
+Write-Host "  Fabric Capacity: $fabricCapacityName" -ForegroundColor White
+Write-Host "  OneLake DFS Endpoint: $fabricOneLakeDfsEndpoint" -ForegroundColor White
 
 if (-not $aksName -or -not $rgName) {
   Write-Host "⚠️  Could not find AKS cluster name or resource group" -ForegroundColor Yellow
@@ -72,7 +80,14 @@ $configuredDeployment = $deploymentTemplate `
   -replace '\$\{COSMOSDB_ENDPOINT\}', $cosmosDbEndpoint `
   -replace '\$\{COSMOSDB_DATABASE_NAME\}', $cosmosDbDatabaseName `
   -replace '\$\{AZURE_SEARCH_ENDPOINT\}', $azureSearchEndpoint `
-  -replace '\$\{AZURE_SEARCH_INDEX_NAME\}', $azureSearchIndexName
+  -replace '\$\{AZURE_SEARCH_INDEX_NAME\}', $azureSearchIndexName `
+  -replace '\$\{FABRIC_ENDPOINT\}', $fabricOneLakeDfsEndpoint `
+  -replace '\$\{FABRIC_WORKSPACE_ID\}', '' `
+  -replace '\$\{FABRIC_ONTOLOGY_NAME\}', 'agent-ontology' `
+  -replace '\$\{FABRIC_ONELAKE_DFS_ENDPOINT\}', $fabricOneLakeDfsEndpoint `
+  -replace '\$\{FABRIC_ONELAKE_BLOB_ENDPOINT\}', $fabricOneLakeBlobEndpoint `
+  -replace '\$\{FABRIC_LAKEHOUSE_NAME\}', 'mcpontologies' `
+  -replace '\$\{FABRIC_ONTOLOGY_PATH\}', 'Files/ontology'
 $configuredDeployment | Out-File -FilePath "./k8s/mcp-server-deployment-configured.yaml" -Encoding utf8
 Write-Host "  ✅ Configured mcp-server-deployment-configured.yaml" -ForegroundColor Green
 
@@ -147,6 +162,18 @@ Write-Host "`n" -NoNewline
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "🎉 Post-provision setup complete!" -ForegroundColor Green
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+
+# Fabric IQ Setup Instructions
+if ($fabricEnabled -eq "true") {
+  Write-Host "`n🧠 Microsoft Fabric IQ Setup:" -ForegroundColor Magenta
+  Write-Host "  1. Create a Fabric Workspace in the Fabric portal" -ForegroundColor White
+  Write-Host "  2. Create a Lakehouse named 'mcpontologies'" -ForegroundColor White
+  Write-Host "  3. Upload ontologies to OneLake:" -ForegroundColor White
+  Write-Host "     ./scripts/upload-ontologies-to-onelake.ps1 -WorkspaceId <GUID> -LakehouseName mcpontologies" -ForegroundColor Yellow
+  Write-Host "  4. Configure Fabric IQ with the uploaded ontologies" -ForegroundColor White
+  Write-Host "  5. Update FABRIC_WORKSPACE_ID environment variable" -ForegroundColor White
+}
+
 Write-Host "`n📝 Run integration tests:" -ForegroundColor Cyan
 Write-Host "   python tests/test_apim_mcp_connection.py --use-az-token" -ForegroundColor White
 Write-Host ""

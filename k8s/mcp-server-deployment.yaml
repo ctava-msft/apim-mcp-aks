@@ -37,7 +37,11 @@ spec:
           value: "${AZURE_CLIENT_ID}"
         - name: FOUNDRY_PROJECT_ENDPOINT
           value: "${FOUNDRY_PROJECT_ENDPOINT}"
+        - name: AZURE_AI_PROJECT_ENDPOINT
+          value: "${FOUNDRY_PROJECT_ENDPOINT}"
         - name: FOUNDRY_MODEL_DEPLOYMENT_NAME
+          value: "${FOUNDRY_MODEL_DEPLOYMENT_NAME}"
+        - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
           value: "${FOUNDRY_MODEL_DEPLOYMENT_NAME}"
         - name: EMBEDDING_MODEL_DEPLOYMENT_NAME
           value: "${EMBEDDING_MODEL_DEPLOYMENT_NAME}"
@@ -49,6 +53,26 @@ spec:
           value: "${AZURE_SEARCH_ENDPOINT}"
         - name: AZURE_SEARCH_INDEX_NAME
           value: "${AZURE_SEARCH_INDEX_NAME}"
+        # Microsoft Fabric IQ configuration (optional - disabled by default)
+        - name: FABRIC_ENABLED
+          value: "${FABRIC_ENABLED}"
+        - name: FABRIC_ENDPOINT
+          value: "${FABRIC_ENDPOINT}"
+        - name: FABRIC_WORKSPACE_ID
+          value: "${FABRIC_WORKSPACE_ID}"
+        - name: FABRIC_ONTOLOGY_NAME
+          value: "${FABRIC_ONTOLOGY_NAME}"
+        - name: FABRIC_ONELAKE_DFS_ENDPOINT
+          value: "${FABRIC_ONELAKE_DFS_ENDPOINT}"
+        - name: FABRIC_ONELAKE_BLOB_ENDPOINT
+          value: "${FABRIC_ONELAKE_BLOB_ENDPOINT}"
+        - name: FABRIC_LAKEHOUSE_NAME
+          value: "${FABRIC_LAKEHOUSE_NAME}"
+        - name: FABRIC_ONTOLOGY_PATH
+          value: "${FABRIC_ONTOLOGY_PATH}"
+        # Ontology storage configuration (Azure Blob Storage - used when Fabric is disabled)
+        - name: ONTOLOGY_CONTAINER_NAME
+          value: "${ONTOLOGY_CONTAINER_NAME}"
         resources:
           requests:
             memory: "256Mi"

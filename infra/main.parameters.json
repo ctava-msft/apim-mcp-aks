@@ -22,6 +22,15 @@
     },
     "existingEntraAppId": {
       "value": "6441e54f-8149-487b-aac4-3a55a049a362"
+    },
+    "fabricEnabled": {
+      "value": "${FABRIC_ENABLED=true}"
+    },
+    "fabricSkuName": {
+      "value": "${FABRIC_SKU=F2}"
+    },
+    "fabricAdminEmail": {
+      "value": "${FABRIC_ADMIN_EMAIL}"
     }
   }
 }

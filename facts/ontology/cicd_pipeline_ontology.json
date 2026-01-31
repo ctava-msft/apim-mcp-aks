@@ -1,0 +1,285 @@
+{
+  "ontology": {
+    "name": "cicd-pipeline-ontology",
+    "version": "1.0.0",
+    "description": "CI/CD Pipeline Ontology for Kubernetes Deployments - Fabric IQ integration",
+    "domain": "devops",
+    "created_at": "2026-01-31T00:00:00Z"
+  },
+  "entity_types": [
+    {
+      "name": "Pipeline",
+      "description": "CI/CD Pipeline definition for microservice deployment",
+      "properties": [
+        {"name": "pipeline_id", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": true},
+        {"name": "repository", "type": "string", "required": true},
+        {"name": "branch", "type": "string"},
+        {"name": "target_cluster", "type": "string"},
+        {"name": "service_name", "type": "string"},
+        {"name": "stages", "type": "array"},
+        {"name": "trigger_type", "type": "enum", "values": ["push", "pull_request", "schedule", "manual"]},
+        {"name": "auto_deploy", "type": "boolean"},
+        {"name": "total_runs", "type": "integer"},
+        {"name": "success_count", "type": "integer"},
+        {"name": "failure_count", "type": "integer"},
+        {"name": "avg_duration_seconds", "type": "float"},
+        {"name": "status", "type": "string"}
+      ]
+    },
+    {
+      "name": "PipelineRun",
+      "description": "Individual pipeline execution record",
+      "properties": [
+        {"name": "run_id", "type": "string", "required": true},
+        {"name": "pipeline_id", "type": "string", "required": true},
+        {"name": "commit_sha", "type": "string"},
+        {"name": "branch", "type": "string"},
+        {"name": "trigger", "type": "string"},
+        {"name": "triggered_by", "type": "string"},
+        {"name": "status", "type": "enum", "values": ["success", "failure", "in_progress", "cancelled", "skipped"]},
+        {"name": "started_at", "type": "datetime"},
+        {"name": "completed_at", "type": "datetime"},
+        {"name": "duration_seconds", "type": "integer"},
+        {"name": "stages_completed", "type": "array"},
+        {"name": "current_stage", "type": "string"},
+        {"name": "failure_category", "type": "string"},
+        {"name": "failure_message", "type": "string"},
+        {"name": "failure_stage", "type": "string"},
+        {"name": "deployed_to", "type": "string"},
+        {"name": "deployment_version", "type": "string"},
+        {"name": "tests_passed", "type": "integer"},
+        {"name": "tests_failed", "type": "integer"},
+        {"name": "coverage_percent", "type": "float"},
+        {"name": "security_issues", "type": "integer"}
+      ]
+    },
+    {
+      "name": "Deployment",
+      "description": "Kubernetes deployment event",
+      "properties": [
+        {"name": "deployment_id", "type": "string", "required": true},
+        {"name": "pipeline_run_id", "type": "string"},
+        {"name": "cluster_name", "type": "string"},
+        {"name": "namespace", "type": "string"},
+        {"name": "service_name", "type": "string"},
+        {"name": "image_tag", "type": "string"},
+        {"name": "replicas", "type": "integer"},
+        {"name": "status", "type": "enum", "values": ["pending", "running", "succeeded", "failed", "rolledback"]},
+        {"name": "ready_replicas", "type": "integer"},
+        {"name": "pod_restarts", "type": "integer"},
+        {"name": "health_check_passed", "type": "boolean"}
+      ]
+    },
+    {
+      "name": "Cluster",
+      "description": "Kubernetes cluster target",
+      "properties": [
+        {"name": "cluster_id", "type": "string", "required": true},
+        {"name": "name", "type": "string"},
+        {"name": "region", "type": "string"},
+        {"name": "environment", "type": "enum", "values": ["production", "staging", "development"]},
+        {"name": "node_count", "type": "integer"},
+        {"name": "kubernetes_version", "type": "string"}
+      ]
+    }
+  ],
+  "relationship_types": [
+    {
+      "name": "HAS_RUN",
+      "source": "Pipeline",
+      "target": "PipelineRun",
+      "description": "Pipeline has execution run"
+    },
+    {
+      "name": "DEPLOYS_TO",
+      "source": "PipelineRun",
+      "target": "Cluster",
+      "description": "Pipeline run deploys to cluster"
+    },
+    {
+      "name": "PRODUCES_DEPLOYMENT",
+      "source": "PipelineRun",
+      "target": "Deployment",
+      "description": "Pipeline run produces deployment"
+    },
+    {
+      "name": "TRIGGERED_BY",
+      "source": "PipelineRun",
+      "target": "PipelineRun",
+      "description": "Pipeline run triggered by another run (rollback)"
+    }
+  ],
+  "failure_categories": [
+    {"name": "build_error", "description": "Compilation or build process failure"},
+    {"name": "test_failure", "description": "Unit or integration test failures"},
+    {"name": "lint_error", "description": "Code linting or style violations"},
+    {"name": "security_scan", "description": "Security vulnerability detected"},
+    {"name": "deployment_error", "description": "Kubernetes deployment failure"},
+    {"name": "infrastructure", "description": "Infrastructure or connectivity issues"},
+    {"name": "timeout", "description": "Job exceeded maximum duration"},
+    {"name": "resource_limit", "description": "Resource exhaustion (CPU, memory)"},
+    {"name": "configuration", "description": "Missing or invalid configuration"}
+  ],
+  "sample_entities": [
+    {
+      "id": "pipe-abc12345",
+      "entity_type": "Pipeline",
+      "properties": {
+        "pipeline_id": "pipe-abc12345",
+        "name": "api-gateway-pipeline",
+        "repository": "org/api-gateway",
+        "branch": "main",
+        "target_cluster": "aks-prod-eastus",
+        "service_name": "api-gateway",
+        "stages": ["checkout", "build", "test", "security-scan", "deploy"],
+        "trigger_type": "push",
+        "auto_deploy": true,
+        "total_runs": 245,
+        "success_count": 228,
+        "failure_count": 17,
+        "avg_duration_seconds": 420,
+        "status": "active"
+      }
+    },
+    {
+      "id": "pipe-def67890",
+      "entity_type": "Pipeline",
+      "properties": {
+        "pipeline_id": "pipe-def67890",
+        "name": "user-service-pipeline",
+        "repository": "org/user-service",
+        "branch": "main",
+        "target_cluster": "aks-prod-eastus",
+        "service_name": "user-service",
+        "stages": ["checkout", "build", "test", "security-scan", "deploy"],
+        "trigger_type": "push",
+        "auto_deploy": true,
+        "total_runs": 189,
+        "success_count": 165,
+        "failure_count": 24,
+        "avg_duration_seconds": 380,
+        "status": "active"
+      }
+    }
+  ],
+  "sample_pipeline_runs": [
+    {
+      "id": "run-xyz11111",
+      "entity_type": "PipelineRun",
+      "properties": {
+        "run_id": "run-xyz11111",
+        "pipeline_id": "pipe-abc12345",
+        "commit_sha": "a1b2c3d",
+        "branch": "main",
+        "trigger": "push",
+        "triggered_by": "alice",
+        "status": "success",
+        "started_at": "2026-01-30T14:30:00Z",
+        "completed_at": "2026-01-30T14:37:00Z",
+        "duration_seconds": 420,
+        "stages_completed": ["checkout", "build", "test", "security-scan", "deploy"],
+        "current_stage": "complete",
+        "deployed_to": "aks-prod-eastus",
+        "deployment_version": "v1.42.15",
+        "tests_passed": 347,
+        "tests_failed": 0,
+        "coverage_percent": 87.3,
+        "security_issues": 0
+      }
+    },
+    {
+      "id": "run-xyz22222",
+      "entity_type": "PipelineRun",
+      "properties": {
+        "run_id": "run-xyz22222",
+        "pipeline_id": "pipe-def67890",
+        "commit_sha": "e4f5g6h",
+        "branch": "feature/auth",
+        "trigger": "pr",
+        "triggered_by": "bob",
+        "status": "failure",
+        "started_at": "2026-01-30T15:00:00Z",
+        "completed_at": "2026-01-30T15:08:00Z",
+        "duration_seconds": 480,
+        "stages_completed": ["checkout", "build"],
+        "current_stage": "test",
+        "failure_category": "test_failure",
+        "failure_message": "3 tests failed in UserServiceTest",
+        "failure_stage": "test",
+        "tests_passed": 142,
+        "tests_failed": 3,
+        "coverage_percent": 72.5,
+        "security_issues": 0
+      }
+    },
+    {
+      "id": "run-xyz33333",
+      "entity_type": "PipelineRun",
+      "properties": {
+        "run_id": "run-xyz33333",
+        "pipeline_id": "pipe-abc12345",
+        "commit_sha": "i7j8k9l",
+        "branch": "main",
+        "trigger": "push",
+        "triggered_by": "charlie",
+        "status": "failure",
+        "started_at": "2026-01-29T10:15:00Z",
+        "completed_at": "2026-01-29T10:22:00Z",
+        "duration_seconds": 420,
+        "stages_completed": ["checkout", "build", "test", "security-scan"],
+        "current_stage": "deploy",
+        "failure_category": "deployment_error",
+        "failure_message": "Pod failed health check after 5 attempts",
+        "failure_stage": "deploy",
+        "tests_passed": 347,
+        "tests_failed": 0,
+        "coverage_percent": 87.3,
+        "security_issues": 0
+      }
+    }
+  ],
+  "sample_facts": [
+    {
+      "id": "fact-pipeline-pipe-abc12345",
+      "fact_type": "observation",
+      "domain": "devops",
+      "statement": "Pipeline 'api-gateway-pipeline' for api-gateway has 93% success rate over 245 runs. Target cluster: aks-prod-eastus. 17 failures detected.",
+      "confidence": 0.95,
+      "evidence": ["pipe-abc12345", "run-xyz11111", "run-xyz33333"],
+      "context": {
+        "success_rate": 0.93,
+        "total_runs": 245,
+        "failures": 17,
+        "avg_duration": 420,
+        "service": "api-gateway"
+      }
+    },
+    {
+      "id": "fact-failure-run-xyz22222",
+      "fact_type": "observation",
+      "domain": "devops",
+      "statement": "Pipeline run run-xyz22222 failed at stage 'test' with error: 3 tests failed in UserServiceTest. Category: test_failure. Triggered by: bob.",
+      "confidence": 1.0,
+      "evidence": ["run-xyz22222", "pipe-def67890"],
+      "context": {
+        "failure_category": "test_failure",
+        "failure_stage": "test",
+        "commit_sha": "e4f5g6h",
+        "duration_seconds": 480
+      }
+    },
+    {
+      "id": "fact-deployment-health",
+      "fact_type": "derived",
+      "domain": "devops",
+      "statement": "Deployment failures account for 35% of pipeline failures. Most common issues: health check failures, resource limits. Consider increasing readiness probe timeout.",
+      "confidence": 0.85,
+      "evidence": ["run-xyz33333"],
+      "context": {
+        "deployment_failure_rate": 0.35,
+        "common_causes": ["health_check", "resource_limit"]
+      }
+    }
+  ]
+}

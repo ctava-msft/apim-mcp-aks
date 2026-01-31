@@ -24,7 +24,7 @@ spec:
       serviceAccountName: mcp-server-sa
       containers:
       - name: mcp-server
-        image: cr3aa6nbg5qypnk.azurecr.io/mcp-server:latest
+        image: cr3aa6nbg5qypnk.azurecr.io/mcp-server:20260131173951
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -37,7 +37,11 @@ spec:
           value: "19475d2e-2380-4df2-b9a7-3d3bc3f323f2"
         - name: FOUNDRY_PROJECT_ENDPOINT
           value: "https://cog-3aa6nbg5qypnk.services.ai.azure.com/api/projects/proj-default"
+        - name: AZURE_AI_PROJECT_ENDPOINT
+          value: "https://cog-3aa6nbg5qypnk.services.ai.azure.com/api/projects/proj-default"
         - name: FOUNDRY_MODEL_DEPLOYMENT_NAME
+          value: "gpt-5.2-chat"
+        - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
           value: "gpt-5.2-chat"
         - name: EMBEDDING_MODEL_DEPLOYMENT_NAME
           value: "text-embedding-3-large"
@@ -49,6 +53,26 @@ spec:
           value: "https://srch-3aa6nbg5qypnk.search.windows.net"
         - name: AZURE_SEARCH_INDEX_NAME
           value: "task-instructions"
+        # Microsoft Fabric IQ configuration (optional - disabled by default)
+        - name: FABRIC_ENABLED
+          value: "false"
+        - name: FABRIC_ENDPOINT
+          value: ""
+        - name: FABRIC_WORKSPACE_ID
+          value: ""
+        - name: FABRIC_ONTOLOGY_NAME
+          value: "agent-ontology"
+        - name: FABRIC_ONELAKE_DFS_ENDPOINT
+          value: ""
+        - name: FABRIC_ONELAKE_BLOB_ENDPOINT
+          value: ""
+        - name: FABRIC_LAKEHOUSE_NAME
+          value: "mcpontologies"
+        - name: FABRIC_ONTOLOGY_PATH
+          value: "Files/ontology"
+        # Ontology storage configuration (Azure Blob Storage - used when Fabric is disabled)
+        - name: ONTOLOGY_CONTAINER_NAME
+          value: "ontologies"
         resources:
           requests:
             memory: "256Mi"

@@ -43,6 +43,7 @@
     "eventGridEventSubscriptions": "evgs-",
     "eventHubNamespaces": "evhns-",
     "eventHubNamespacesEventHubs": "evh-",
+    "fabricCapacities": "fc",
     "hdInsightClustersHadoop": "hadoop-",
     "hdInsightClustersHbase": "hbase-",
     "hdInsightClustersKafka": "kafka-",

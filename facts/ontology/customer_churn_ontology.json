@@ -1,0 +1,188 @@
+{
+  "ontology": {
+    "name": "customer-churn-ontology",
+    "version": "1.0.0",
+    "description": "Customer Churn Analysis Ontology for Fabric IQ integration",
+    "domain": "customer",
+    "created_at": "2026-01-31T00:00:00Z"
+  },
+  "entity_types": [
+    {
+      "name": "Customer",
+      "description": "A customer account with subscription and engagement data",
+      "properties": [
+        {"name": "customer_id", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": true},
+        {"name": "email", "type": "string", "required": true},
+        {"name": "segment", "type": "enum", "values": ["enterprise", "business", "professional", "starter", "trial"]},
+        {"name": "tenure_months", "type": "integer"},
+        {"name": "monthly_spend", "type": "float"},
+        {"name": "total_spend", "type": "float"},
+        {"name": "login_frequency", "type": "float"},
+        {"name": "feature_usage_score", "type": "float"},
+        {"name": "support_tickets_30d", "type": "integer"},
+        {"name": "nps_score", "type": "integer"},
+        {"name": "days_since_last_login", "type": "integer"},
+        {"name": "payment_issues_count", "type": "integer"},
+        {"name": "downgrade_requests", "type": "integer"},
+        {"name": "churn_risk", "type": "float"},
+        {"name": "risk_level", "type": "enum", "values": ["critical", "high", "medium", "low", "minimal"]}
+      ]
+    },
+    {
+      "name": "Transaction",
+      "description": "Customer transaction record",
+      "properties": [
+        {"name": "transaction_id", "type": "string", "required": true},
+        {"name": "customer_id", "type": "string", "required": true},
+        {"name": "transaction_type", "type": "enum", "values": ["purchase", "renewal", "upgrade", "downgrade", "refund"]},
+        {"name": "amount", "type": "float"},
+        {"name": "currency", "type": "string"},
+        {"name": "product", "type": "string"},
+        {"name": "timestamp", "type": "datetime"},
+        {"name": "status", "type": "enum", "values": ["completed", "pending", "failed", "refunded"]}
+      ]
+    },
+    {
+      "name": "EngagementEvent",
+      "description": "Customer engagement activity",
+      "properties": [
+        {"name": "event_id", "type": "string", "required": true},
+        {"name": "customer_id", "type": "string", "required": true},
+        {"name": "event_type", "type": "enum", "values": ["login", "feature_use", "support_ticket", "feedback", "export"]},
+        {"name": "feature_name", "type": "string"},
+        {"name": "duration_seconds", "type": "integer"},
+        {"name": "timestamp", "type": "datetime"}
+      ]
+    },
+    {
+      "name": "ChurnPrediction",
+      "description": "AI-generated churn prediction fact",
+      "properties": [
+        {"name": "prediction_id", "type": "string", "required": true},
+        {"name": "customer_id", "type": "string", "required": true},
+        {"name": "churn_probability", "type": "float"},
+        {"name": "risk_level", "type": "string"},
+        {"name": "key_factors", "type": "array"},
+        {"name": "recommended_actions", "type": "array"},
+        {"name": "predicted_at", "type": "datetime"}
+      ]
+    }
+  ],
+  "relationship_types": [
+    {
+      "name": "HAS_TRANSACTION",
+      "source": "Customer",
+      "target": "Transaction",
+      "description": "Customer has made a transaction"
+    },
+    {
+      "name": "HAS_ENGAGEMENT",
+      "source": "Customer",
+      "target": "EngagementEvent",
+      "description": "Customer has engagement activity"
+    },
+    {
+      "name": "PREDICTED_CHURN",
+      "source": "Customer",
+      "target": "ChurnPrediction",
+      "description": "Customer has churn prediction"
+    }
+  ],
+  "sample_entities": [
+    {
+      "id": "cust-a1b2c3d4",
+      "entity_type": "Customer",
+      "properties": {
+        "customer_id": "cust-a1b2c3d4",
+        "name": "Emma Smith",
+        "email": "emma.smith@example.com",
+        "segment": "enterprise",
+        "tenure_months": 36,
+        "monthly_spend": 8500.00,
+        "total_spend": 306000.00,
+        "login_frequency": 5.2,
+        "feature_usage_score": 85.3,
+        "support_tickets_30d": 1,
+        "nps_score": 72,
+        "days_since_last_login": 2,
+        "payment_issues_count": 0,
+        "downgrade_requests": 0,
+        "churn_risk": 0.12,
+        "risk_level": "minimal"
+      }
+    },
+    {
+      "id": "cust-e5f6g7h8",
+      "entity_type": "Customer",
+      "properties": {
+        "customer_id": "cust-e5f6g7h8",
+        "name": "Liam Johnson",
+        "email": "liam.johnson@example.com",
+        "segment": "business",
+        "tenure_months": 8,
+        "monthly_spend": 450.00,
+        "total_spend": 3600.00,
+        "login_frequency": 0.8,
+        "feature_usage_score": 28.5,
+        "support_tickets_30d": 4,
+        "nps_score": -15,
+        "days_since_last_login": 21,
+        "payment_issues_count": 2,
+        "downgrade_requests": 1,
+        "churn_risk": 0.82,
+        "risk_level": "critical"
+      }
+    },
+    {
+      "id": "cust-i9j0k1l2",
+      "entity_type": "Customer",
+      "properties": {
+        "customer_id": "cust-i9j0k1l2",
+        "name": "Olivia Williams",
+        "email": "olivia.williams@example.com",
+        "segment": "professional",
+        "tenure_months": 15,
+        "monthly_spend": 250.00,
+        "total_spend": 3750.00,
+        "login_frequency": 2.5,
+        "feature_usage_score": 55.0,
+        "support_tickets_30d": 2,
+        "nps_score": 35,
+        "days_since_last_login": 7,
+        "payment_issues_count": 0,
+        "downgrade_requests": 0,
+        "churn_risk": 0.45,
+        "risk_level": "medium"
+      }
+    }
+  ],
+  "sample_facts": [
+    {
+      "id": "fact-churn-cust-e5f6g7h8",
+      "fact_type": "prediction",
+      "domain": "customer",
+      "statement": "Customer 'Liam Johnson' (business segment) has 82% churn risk. Key indicators: 21 days since last login, feature usage score of 29/100, NPS score of -15.",
+      "confidence": 0.82,
+      "evidence": ["cust-e5f6g7h8"],
+      "context": {
+        "segment": "business",
+        "risk_level": "critical",
+        "tenure_months": 8,
+        "monthly_spend": 450.00
+      }
+    },
+    {
+      "id": "fact-retention-enterprise",
+      "fact_type": "derived",
+      "domain": "customer",
+      "statement": "Enterprise segment customers show highest retention with average churn risk of 15%. Focus retention efforts on business and professional segments.",
+      "confidence": 0.88,
+      "evidence": ["cust-a1b2c3d4"],
+      "context": {
+        "segment": "enterprise",
+        "avg_churn_risk": 0.15
+      }
+    }
+  ]
+}

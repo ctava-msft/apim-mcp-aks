@@ -49,6 +49,16 @@ param cosmosDatabaseName string = 'mcpdb'
 param searchServiceName string = ''
 param searchIndexName string = 'task-instructions'
 
+// Ontology storage container (used when Fabric is disabled)
+var ontologyContainerName = 'ontologies'
+
+// Microsoft Fabric configuration for Fabric IQ ontologies (disabled by default)
+param fabricCapacityName string = ''
+@allowed(['F2', 'F4', 'F8', 'F16', 'F32', 'F64', 'F128', 'F256', 'F512', 'F1024', 'F2048'])
+param fabricSkuName string = 'F2'
+param fabricAdminEmail string = ''
+param fabricEnabled bool = false  // Set to true to enable Fabric capacity deployment
+
 // MCP Client APIM gateway specific variables
 
 var oauth_scopes = 'openid https://graph.microsoft.com/.default'
@@ -553,6 +563,43 @@ module searchServiceRoleAssignmentMcp './core/search/search-role-assignment.bice
   }
 }
 
+// =========================================
+// Microsoft Fabric for Fabric IQ Ontologies (Optional)
+// =========================================
+
+// Fabric capacity names must be lowercase alphanumeric only (no hyphens), 3-63 chars
+var fabricResourceName = !empty(fabricCapacityName) ? fabricCapacityName : toLower('${abbrs.fabricCapacities}${replace(resourceToken, '-', '')}')
+
+// Fabric Capacity for Fabric IQ workloads (only deployed when fabricEnabled=true)
+module fabricCapacity './core/fabric/fabric-capacity.bicep' = if (fabricEnabled) {
+  name: 'fabricCapacity'
+  scope: rg
+  params: {
+    name: fabricResourceName
+    location: location
+    tags: tags
+    skuName: fabricSkuName
+    adminMembers: !empty(fabricAdminEmail) ? [fabricAdminEmail] : []
+  }
+}
+
+// Private endpoint for Fabric/OneLake (only deployed when fabricEnabled=true)
+module fabricPrivateEndpoint 'app/fabric-PrivateEndpoint.bicep' = if (fabricEnabled && vnetEnabled) {
+  name: 'fabricPrivateEndpoint'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    virtualNetworkName: serviceVirtualNetworkName
+    subnetName: vnetEnabled ? serviceVirtualNetworkPrivateEndpointSubnetName : ''
+    fabricCapacityId: fabricCapacity!.outputs.id
+    fabricCapacityName: fabricResourceName
+  }
+  dependsOn: [
+    serviceVirtualNetwork
+  ]
+}
+
 // Monitor application with Azure Monitor
 module monitoring './core/monitor/monitoring.bicep' = {
   name: 'monitoring'
@@ -615,3 +662,14 @@ output COSMOSDB_ACCOUNT_NAME string = cosmosAccount.outputs.name
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_SEARCH_INDEX_NAME string = searchIndexName
 output AZURE_SEARCH_SERVICE_NAME string = searchService.outputs.name
+
+// Ontology storage outputs (Azure Blob Storage - used when Fabric is disabled)
+output ONTOLOGY_CONTAINER_NAME string = ontologyContainerName
+output ONTOLOGY_STORAGE_URL string = '${storage.outputs.primaryEndpoints.blob}${ontologyContainerName}'
+
+// Microsoft Fabric outputs for Fabric IQ (only populated when fabricEnabled=true)
+output FABRIC_CAPACITY_NAME string = fabricEnabled ? fabricCapacity!.outputs.name : ''
+output FABRIC_ENABLED bool = fabricEnabled
+// OneLake endpoints (workspace-specific endpoints are constructed dynamically)
+output FABRIC_ONELAKE_DFS_ENDPOINT string = fabricEnabled ? 'https://onelake.dfs.fabric.microsoft.com' : ''
+output FABRIC_ONELAKE_BLOB_ENDPOINT string = fabricEnabled ? 'https://onelake.blob.fabric.microsoft.com' : ''

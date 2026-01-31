@@ -1,0 +1,328 @@
+{
+  "ontology": {
+    "name": "user-management-ontology",
+    "version": "1.0.0",
+    "description": "User Management and Authentication Ontology for REST API - Fabric IQ integration",
+    "domain": "user_management",
+    "created_at": "2026-01-31T00:00:00Z"
+  },
+  "entity_types": [
+    {
+      "name": "User",
+      "description": "User account with authentication and authorization data",
+      "properties": [
+        {"name": "user_id", "type": "string", "required": true},
+        {"name": "email", "type": "string", "required": true},
+        {"name": "username", "type": "string", "required": true},
+        {"name": "first_name", "type": "string"},
+        {"name": "last_name", "type": "string"},
+        {"name": "status", "type": "enum", "values": ["active", "inactive", "suspended", "pending_verification", "locked"]},
+        {"name": "roles", "type": "array"},
+        {"name": "permissions", "type": "array"},
+        {"name": "mfa_enabled", "type": "boolean"},
+        {"name": "last_password_change", "type": "datetime"},
+        {"name": "failed_login_attempts", "type": "integer"},
+        {"name": "created_at", "type": "datetime"},
+        {"name": "last_login", "type": "datetime"},
+        {"name": "total_sessions", "type": "integer"}
+      ]
+    },
+    {
+      "name": "Session",
+      "description": "User authentication session",
+      "properties": [
+        {"name": "session_id", "type": "string", "required": true},
+        {"name": "user_id", "type": "string", "required": true},
+        {"name": "started_at", "type": "datetime"},
+        {"name": "expires_at", "type": "datetime"},
+        {"name": "ip_address", "type": "string"},
+        {"name": "user_agent", "type": "string"},
+        {"name": "device_type", "type": "string"},
+        {"name": "location", "type": "string"},
+        {"name": "is_active", "type": "boolean"}
+      ]
+    },
+    {
+      "name": "AuthEvent",
+      "description": "Authentication event (login, logout, password change, etc.)",
+      "properties": [
+        {"name": "event_id", "type": "string", "required": true},
+        {"name": "user_id", "type": "string", "required": true},
+        {"name": "event_type", "type": "enum", "values": ["login_success", "login_failure", "logout", "password_change", "password_reset", "mfa_enabled", "mfa_disabled", "mfa_challenge", "token_refresh", "session_expired", "account_locked", "account_unlocked"]},
+        {"name": "timestamp", "type": "datetime"},
+        {"name": "ip_address", "type": "string"},
+        {"name": "user_agent", "type": "string"},
+        {"name": "location", "type": "string"},
+        {"name": "device_type", "type": "string"},
+        {"name": "session_id", "type": "string"},
+        {"name": "success", "type": "boolean"},
+        {"name": "failure_reason", "type": "string"},
+        {"name": "risk_score", "type": "float"}
+      ]
+    },
+    {
+      "name": "AccessLog",
+      "description": "Resource access log entry",
+      "properties": [
+        {"name": "log_id", "type": "string", "required": true},
+        {"name": "user_id", "type": "string", "required": true},
+        {"name": "session_id", "type": "string"},
+        {"name": "timestamp", "type": "datetime"},
+        {"name": "resource_type", "type": "string"},
+        {"name": "resource_path", "type": "string"},
+        {"name": "action", "type": "enum", "values": ["create", "read", "update", "delete", "execute", "admin"]},
+        {"name": "method", "type": "string"},
+        {"name": "status_code", "type": "integer"},
+        {"name": "response_time_ms", "type": "integer"},
+        {"name": "ip_address", "type": "string"}
+      ]
+    },
+    {
+      "name": "Role",
+      "description": "Authorization role",
+      "properties": [
+        {"name": "role_id", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": true},
+        {"name": "description", "type": "string"},
+        {"name": "permissions", "type": "array"}
+      ]
+    }
+  ],
+  "relationship_types": [
+    {
+      "name": "HAS_SESSION",
+      "source": "User",
+      "target": "Session",
+      "description": "User has active session"
+    },
+    {
+      "name": "HAS_AUTH_EVENT",
+      "source": "User",
+      "target": "AuthEvent",
+      "description": "User has authentication event"
+    },
+    {
+      "name": "HAS_ROLE",
+      "source": "User",
+      "target": "Role",
+      "description": "User has assigned role"
+    },
+    {
+      "name": "ACCESSED_RESOURCE",
+      "source": "Session",
+      "target": "AccessLog",
+      "description": "Session accessed a resource"
+    }
+  ],
+  "sample_entities": [
+    {
+      "id": "user-admin001",
+      "entity_type": "User",
+      "properties": {
+        "user_id": "user-admin001",
+        "email": "admin@company.com",
+        "username": "admin",
+        "first_name": "System",
+        "last_name": "Administrator",
+        "status": "active",
+        "roles": ["admin", "user"],
+        "permissions": ["read:all_users", "update:all_users", "delete:users", "manage:roles", "read:own_profile", "update:own_profile", "read:public_data"],
+        "mfa_enabled": true,
+        "last_password_change": "2026-01-15T10:00:00Z",
+        "failed_login_attempts": 0,
+        "created_at": "2024-06-01T00:00:00Z",
+        "last_login": "2026-01-31T08:30:00Z",
+        "total_sessions": 450
+      }
+    },
+    {
+      "id": "user-jsmith01",
+      "entity_type": "User",
+      "properties": {
+        "user_id": "user-jsmith01",
+        "email": "jsmith@company.com",
+        "username": "jsmith",
+        "first_name": "John",
+        "last_name": "Smith",
+        "status": "active",
+        "roles": ["developer", "user"],
+        "permissions": ["read:api_docs", "create:api_keys", "access:dev_tools", "read:own_profile", "update:own_profile", "read:public_data"],
+        "mfa_enabled": true,
+        "last_password_change": "2026-01-20T14:00:00Z",
+        "failed_login_attempts": 1,
+        "created_at": "2025-03-15T00:00:00Z",
+        "last_login": "2026-01-31T09:15:00Z",
+        "total_sessions": 180
+      }
+    },
+    {
+      "id": "user-mjohnson",
+      "entity_type": "User",
+      "properties": {
+        "user_id": "user-mjohnson",
+        "email": "mjohnson@company.com",
+        "username": "mjohnson",
+        "first_name": "Mary",
+        "last_name": "Johnson",
+        "status": "locked",
+        "roles": ["user"],
+        "permissions": ["read:own_profile", "update:own_profile", "read:public_data"],
+        "mfa_enabled": false,
+        "last_password_change": "2025-11-10T09:00:00Z",
+        "failed_login_attempts": 5,
+        "created_at": "2025-08-20T00:00:00Z",
+        "last_login": "2026-01-29T11:30:00Z",
+        "total_sessions": 45
+      }
+    }
+  ],
+  "sample_auth_events": [
+    {
+      "id": "auth-evt-001",
+      "entity_type": "AuthEvent",
+      "properties": {
+        "event_id": "auth-evt-001",
+        "user_id": "user-jsmith01",
+        "event_type": "login_success",
+        "timestamp": "2026-01-31T09:15:00Z",
+        "ip_address": "10.0.1.50",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
+        "location": "New York, US",
+        "device_type": "desktop",
+        "session_id": "sess-abc123",
+        "success": true,
+        "risk_score": 0.05
+      }
+    },
+    {
+      "id": "auth-evt-002",
+      "entity_type": "AuthEvent",
+      "properties": {
+        "event_id": "auth-evt-002",
+        "user_id": "user-mjohnson",
+        "event_type": "login_failure",
+        "timestamp": "2026-01-29T11:35:00Z",
+        "ip_address": "185.220.101.42",
+        "user_agent": "Python-urllib/3.11",
+        "location": "Unknown",
+        "device_type": "api",
+        "success": false,
+        "failure_reason": "Invalid password",
+        "risk_score": 0.75
+      }
+    },
+    {
+      "id": "auth-evt-003",
+      "entity_type": "AuthEvent",
+      "properties": {
+        "event_id": "auth-evt-003",
+        "user_id": "user-mjohnson",
+        "event_type": "account_locked",
+        "timestamp": "2026-01-29T11:40:00Z",
+        "ip_address": "185.220.101.42",
+        "user_agent": "Python-urllib/3.11",
+        "location": "Unknown",
+        "device_type": "api",
+        "success": false,
+        "failure_reason": "Maximum login attempts exceeded",
+        "risk_score": 0.95
+      }
+    }
+  ],
+  "sample_access_logs": [
+    {
+      "id": "log-001",
+      "entity_type": "AccessLog",
+      "properties": {
+        "log_id": "log-001",
+        "user_id": "user-jsmith01",
+        "session_id": "sess-abc123",
+        "timestamp": "2026-01-31T09:20:00Z",
+        "resource_type": "api",
+        "resource_path": "/api/v1/users/me",
+        "action": "read",
+        "method": "GET",
+        "status_code": 200,
+        "response_time_ms": 45,
+        "ip_address": "10.0.1.50"
+      }
+    },
+    {
+      "id": "log-002",
+      "entity_type": "AccessLog",
+      "properties": {
+        "log_id": "log-002",
+        "user_id": "user-jsmith01",
+        "session_id": "sess-abc123",
+        "timestamp": "2026-01-31T09:25:00Z",
+        "resource_type": "api",
+        "resource_path": "/api/v1/reports",
+        "action": "read",
+        "method": "GET",
+        "status_code": 200,
+        "response_time_ms": 230,
+        "ip_address": "10.0.1.50"
+      }
+    },
+    {
+      "id": "log-003",
+      "entity_type": "AccessLog",
+      "properties": {
+        "log_id": "log-003",
+        "user_id": "user-jsmith01",
+        "session_id": "sess-abc123",
+        "timestamp": "2026-01-31T09:30:00Z",
+        "resource_type": "admin",
+        "resource_path": "/admin/users",
+        "action": "read",
+        "method": "GET",
+        "status_code": 403,
+        "response_time_ms": 12,
+        "ip_address": "10.0.1.50"
+      }
+    }
+  ],
+  "sample_facts": [
+    {
+      "id": "fact-user-user-mjohnson",
+      "fact_type": "observation",
+      "domain": "user_management",
+      "statement": "User 'mjohnson' (user) has 0 successful logins and 5 failed attempts. MFA enabled: false. Status: locked. 2 high-risk authentication events detected.",
+      "confidence": 0.9,
+      "evidence": ["user-mjohnson", "auth-evt-002", "auth-evt-003"],
+      "context": {
+        "roles": ["user"],
+        "mfa_enabled": false,
+        "status": "locked",
+        "login_successes": 0,
+        "login_failures": 5,
+        "high_risk_events": 2
+      }
+    },
+    {
+      "id": "fact-security-user-mjohnson",
+      "fact_type": "derived",
+      "domain": "user_management",
+      "statement": "SECURITY ALERT: User 'mjohnson' shows suspicious activity pattern. 5 failed login attempts, 2 high-risk events. Recommend review of account activity.",
+      "confidence": 0.85,
+      "evidence": ["user-mjohnson"],
+      "context": {
+        "alert_type": "suspicious_activity",
+        "failed_logins": 5,
+        "high_risk_events": 2
+      }
+    },
+    {
+      "id": "fact-mfa-adoption",
+      "fact_type": "derived",
+      "domain": "user_management",
+      "statement": "MFA adoption rate is 67% across all users. Users without MFA show 3x higher rate of security incidents. Recommend mandatory MFA policy.",
+      "confidence": 0.88,
+      "evidence": ["user-admin001", "user-jsmith01", "user-mjohnson"],
+      "context": {
+        "mfa_adoption_rate": 0.67,
+        "security_incident_multiplier": 3.0
+      }
+    }
+  ]
+}
