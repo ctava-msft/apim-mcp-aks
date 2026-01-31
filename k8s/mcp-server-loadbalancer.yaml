@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server-loadbalancer
+  namespace: mcp-server
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"  # Public load balancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: mcp-server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000

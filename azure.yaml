@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: apim-mcp-aks
+metadata:
+  template: apim-mcp-aks@1.0.0
+  
+services:
+  mcp-server:
+    project: ./src/
+    language: python
+    host: aks
+    
+hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: ./infra/hooks/postprovision.ps1
+      continueOnError: false
+      interactive: true
+    
+    posix:
+      shell: sh
+      run: ./infra/hooks/postprovision.sh
+      continueOnError: false
+      interactive: true
