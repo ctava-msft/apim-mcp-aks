@@ -16,6 +16,9 @@ param enableVectorSearch bool = false
 @description('Enables NoSQL full text search for this account. Defaults to false.')
 param enableNoSQLFullTextSearch bool = false
 
+@description('IP addresses or CIDR ranges allowed to access the account (for developer access).')
+param ipRules array = []
+
 module account '../account.bicep' = {
   name: 'cosmos-db-nosql-account'
   params: {
@@ -27,6 +30,7 @@ module account '../account.bicep' = {
     enableNoSQLVectorSearch: enableVectorSearch
     enableNoSQLFullTextSearch: enableNoSQLFullTextSearch
     disableKeyBasedAuth: disableKeyBasedAuth
+    ipRules: ipRules
   }
 }
 

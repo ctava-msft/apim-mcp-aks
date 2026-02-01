@@ -242,10 +242,54 @@ FABRIC_ENABLED: false
 
 ---
 
+## Agent Lightning (Fine-Tuning & RL)
+
+Agent Lightning enables reinforcement learning and fine-tuning for MCP agents. It captures agent interactions, labels them with rewards, builds training datasets, and manages fine-tuned model deployments.
+
+### Enable Lightning Capture
+
+1. **Deploy Lightning Cosmos containers** (automatically included in `azd provision`):
+   - Database: `agent_rl`
+   - Containers: `rl_episodes`, `rl_rewards`, `rl_datasets`, `rl_training_runs`, `rl_deployments`
+
+2. **Enable capture in Kubernetes**:
+   ```bash
+   kubectl set env deployment/mcp-agents -n mcp-agents ENABLE_LIGHTNING_CAPTURE=true
+   ```
+
+3. **Verify Lightning is working**:
+   ```bash
+   python tests/test_demo_lightning_loop.py --direct
+   ```
+
+### Lightning Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_LIGHTNING_CAPTURE` | `false` | Enable episode capture for training |
+| `USE_TUNED_MODEL` | `false` | Use fine-tuned model if available |
+| `LIGHTNING_AGENT_ID` | `mcp-agents` | Agent identifier for episodes |
+| `COSMOS_ACCOUNT_URI` | Same as `COSMOSDB_ENDPOINT` | Cosmos endpoint for Lightning |
+| `COSMOS_DATABASE_NAME` | `agent_rl` | Lightning database name |
+
+### Lightning Workflow
+
+```
+1. Capture Episodes     →  ask_foundry, next_best_action calls
+2. Label with Rewards   →  python -m lightning.cli label
+3. Build Dataset        →  python -m lightning.cli build-dataset
+4. Fine-tune Model      →  python -m lightning.cli train
+5. Promote Model        →  python -m lightning.cli promote
+6. Enable Tuned Model   →  kubectl set env ... USE_TUNED_MODEL=true
+```
+
+See [docs/AGENT-LIGHTNING.md](docs/AGENT-LIGHTNING.md) for complete documentation.
+
+---
+
 ## Additional Documentation
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture diagrams
 - [DEPLOYMENT_NOTES.md](docs/DEPLOYMENT_NOTES.md) - Detailed deployment notes
 - [IDENTITY_DESIGN.md](docs/IDENTITY_DESIGN.md) - Identity architecture design
-- [TEST_RESULTS.md](docs/TEST_RESULTS.md) - Test execution results
-
+- [AGENT-LIGHTNING.md](docs/AGENT-LIGHTNING.md) - Fine-tuning and RL documentation

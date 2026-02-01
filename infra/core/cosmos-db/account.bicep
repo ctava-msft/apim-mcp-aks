@@ -20,6 +20,9 @@ param enableNoSQLFullTextSearch bool = false
 @description('Disables key-based authentication. Defaults to false.')
 param disableKeyBasedAuth bool = false
 
+@description('IP addresses or CIDR ranges allowed to access the account (for developer access).')
+param ipRules array = []
+
 resource account 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: name
   location: location
@@ -40,6 +43,11 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
     disableLocalAuth: disableKeyBasedAuth
+    // Allow access from Azure Portal and specified IP addresses
+    ipRules: [for ip in ipRules: {
+      ipAddressOrRange: ip
+    }]
+    publicNetworkAccess: empty(ipRules) ? 'Disabled' : 'SecuredByPerimeter'
     capabilities: union(
       (enableServerless)
         ? [

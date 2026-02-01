@@ -74,6 +74,12 @@ param agentIdentityDisplayName string = ''
 @description('Principal ID of sponsor user for agent identity (admin user)')
 param agentSponsorPrincipalId string = ''
 
+@description('Principal ID of developer user for local development Cosmos DB access (optional)')
+param developerPrincipalId string = ''
+
+@description('Developer IP address for Cosmos DB firewall access (optional, for local development)')
+param developerIpAddress string = ''
+
 // MCP Client APIM gateway specific variables
 
 var oauth_scopes = 'openid https://graph.microsoft.com/.default'
@@ -432,6 +438,7 @@ module cosmosAccount './core/cosmos-db/nosql/account.bicep' = {
     enableServerless: true
     enableVectorSearch: true
     disableKeyBasedAuth: true
+    ipRules: !empty(developerIpAddress) ? [developerIpAddress] : []
   }
 }
 
@@ -554,6 +561,21 @@ module cosmosShortTermMemoryContainer './core/cosmos-db/nosql/container.bicep' =
   }
 }
 
+// =========================================
+// Agent Lightning Cosmos DB Resources
+// Database and containers for RL fine-tuning loop
+// See docs/AGENT-LIGHTNING.md for details
+// =========================================
+module lightningCosmos './app/lightning-cosmos.bicep' = {
+  name: 'lightningCosmos'
+  scope: rg
+  params: {
+    parentAccountName: cosmosAccount.outputs.name
+    databaseName: 'agent_rl'
+    tags: tags
+  }
+}
+
 // Private endpoint for CosmosDB
 module cosmosPrivateEndpoint 'app/cosmos-PrivateEndpoint.bicep' = if (vnetEnabled) {
   name: 'cosmosPrivateEndpoint'
@@ -580,6 +602,18 @@ module cosmosRoleAssignmentMcp './app/cosmos-RoleAssignment.bicep' = {
     cosmosAccountName: cosmosAccount.outputs.name
     roleDefinitionID: CosmosDBDataContributor
     principalID: mcpUserAssignedIdentity.outputs.identityPrincipalId
+  }
+}
+
+// RBAC: Cosmos DB Built-in Data Contributor role for developer (local development)
+module cosmosRoleAssignmentDeveloper './app/cosmos-RoleAssignment.bicep' = if (!empty(developerPrincipalId)) {
+  name: 'cosmosRoleAssignmentDeveloper'
+  scope: rg
+  params: {
+    cosmosAccountName: cosmosAccount.outputs.name
+    roleDefinitionID: CosmosDBDataContributor
+    principalID: developerPrincipalId
+    principalType: 'User'
   }
 }
 
@@ -761,6 +795,10 @@ output EMBEDDING_MODEL_DEPLOYMENT_NAME string = embeddingModelDeploymentName
 output COSMOSDB_ENDPOINT string = cosmosAccount.outputs.endpoint
 output COSMOSDB_DATABASE_NAME string = cosmosDatabaseName
 output COSMOSDB_ACCOUNT_NAME string = cosmosAccount.outputs.name
+
+// Agent Lightning Cosmos DB outputs (for RL fine-tuning)
+output COSMOS_ACCOUNT_URI string = cosmosAccount.outputs.endpoint
+output COSMOS_DATABASE_NAME string = lightningCosmos.outputs.databaseName
 
 // Azure AI Search outputs
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint

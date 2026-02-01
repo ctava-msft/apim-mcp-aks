@@ -34,6 +34,12 @@
     },
     "agentIdentityEnabled": {
       "value": "${AGENT_IDENTITY_ENABLED=false}"
+    },
+    "developerPrincipalId": {
+      "value": "${DEVELOPER_PRINCIPAL_ID=}"
+    },
+    "developerIpAddress": {
+      "value": "${DEVELOPER_IP_ADDRESS=}"
     }
   }
 }

@@ -117,6 +117,21 @@ spec:
         - name: COSMOSDB_DATABASE_NAME
           value: "${COSMOSDB_DATABASE_NAME}"
         # =========================================
+        # Agent Lightning Configuration (RL Fine-Tuning)
+        # =========================================
+        - name: COSMOS_ACCOUNT_URI
+          value: "${COSMOSDB_ENDPOINT}"
+        - name: COSMOS_DATABASE_NAME
+          value: "agent_rl"
+        - name: LIGHTNING_AGENT_ID
+          value: "mcp-agents"
+        - name: ENABLE_LIGHTNING_CAPTURE
+          value: "${ENABLE_LIGHTNING_CAPTURE:-false}"
+        - name: USE_TUNED_MODEL
+          value: "${USE_TUNED_MODEL:-false}"
+        - name: TUNED_MODEL_DEPLOYMENT_NAME
+          value: "${TUNED_MODEL_DEPLOYMENT_NAME:-}"
+        # =========================================
         # Azure AI Search Configuration (Foundry IQ)
         # =========================================
         - name: AZURE_SEARCH_ENDPOINT
@@ -147,6 +162,9 @@ spec:
         # =========================================
         - name: ONTOLOGY_CONTAINER_NAME
           value: "${ONTOLOGY_CONTAINER_NAME}"
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -178,6 +196,9 @@ spec:
           capabilities:
             drop:
             - ALL
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
