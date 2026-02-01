@@ -11,6 +11,7 @@ pydantic>=2.9.0
 # Pin version to avoid breaking changes
 agent-framework-azure-ai==1.0.0b260107
 agent-framework-core==1.0.0b260107
+agent-framework-azure-ai-search==1.0.0b260107
 
 # Azure AI Search for long-term memory and Foundry IQ integration
 azure-search-documents>=11.5.0

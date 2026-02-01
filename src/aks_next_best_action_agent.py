@@ -32,6 +32,7 @@ from agent_framework.azure import AzureAIAgentClient
 # Memory Provider imports
 from memory import (
     ShortTermMemory, MemoryEntry, MemoryType, CompositeMemory, LongTermMemory,
+    AISEARCH_CONTEXT_PROVIDER_AVAILABLE,
     # Fabric IQ Facts Memory
     FactsMemory, Fact, FactSearchResult, OntologyEntity, EntityType, RelationshipType,
     # Domain ontology data generators
@@ -239,7 +240,7 @@ FABRIC_ONTOLOGY_PATH = os.getenv("FABRIC_ONTOLOGY_PATH", "Files/ontology")
 ONTOLOGY_CONTAINER_NAME = os.getenv("ONTOLOGY_CONTAINER_NAME", "ontologies")
 AZURE_STORAGE_ACCOUNT_URL = os.getenv("AZURE_STORAGE_ACCOUNT_URL", "")
 
-# AI Search Long-Term Memory will be initialized after helper functions are defined
+# AI Search Long-Term Memory with AzureAISearchContextProvider
 long_term_memory: Optional[LongTermMemory] = None
 
 # Fabric IQ Facts Memory for ontology-grounded facts
@@ -613,29 +614,33 @@ Return ONLY valid JSON array, no markdown or explanation."""
 # =========================================
 
 def _initialize_long_term_memory():
-    """Initialize AI Search long-term memory with embedding function."""
+    """Initialize AI Search long-term memory with AzureAISearchContextProvider."""
     global long_term_memory
     
-    if AZURE_SEARCH_ENDPOINT:
+    if AZURE_SEARCH_ENDPOINT and FOUNDRY_PROJECT_ENDPOINT:
         try:
             long_term_memory = LongTermMemory(
-                endpoint=AZURE_SEARCH_ENDPOINT,
-                index_name=AZURE_SEARCH_INDEX_NAME,
+                search_endpoint=AZURE_SEARCH_ENDPOINT,
                 foundry_endpoint=FOUNDRY_PROJECT_ENDPOINT,
+                index_name=AZURE_SEARCH_INDEX_NAME,
+                mode="agentic",
             )
             # Set embedding function for the long-term memory
-            if FOUNDRY_PROJECT_ENDPOINT:
-                long_term_memory.set_embedding_function(get_embedding)
+            long_term_memory.set_embedding_function(get_embedding)
             
             # Update composite memory with long-term if it exists
             if composite_memory:
                 composite_memory._long_term = long_term_memory
             
-            logger.info(f"AI Search Long-Term Memory initialized: {AZURE_SEARCH_INDEX_NAME}")
+            if AISEARCH_CONTEXT_PROVIDER_AVAILABLE:
+                logger.info(f"LongTermMemory initialized with AzureAISearchContextProvider: {AZURE_SEARCH_INDEX_NAME}")
+            else:
+                logger.warning(f"LongTermMemory initialized WITHOUT AzureAISearchContextProvider (package not installed): {AZURE_SEARCH_INDEX_NAME}")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize AI Search long-term memory: {e}")
+            logger.error(f"Failed to initialize long-term memory: {e}")
     else:
-        logger.warning("AZURE_SEARCH_ENDPOINT not configured - long-term memory will not work")
+        logger.warning("AZURE_SEARCH_ENDPOINT or FOUNDRY_PROJECT_ENDPOINT not configured - long-term memory will not work")
 
 
 def _initialize_facts_memory():
@@ -1033,11 +1038,29 @@ def next_best_action_tool(task: str) -> str:
         similar_tasks = find_similar_tasks(task_embedding, threshold=0.7, limit=5)
         
         # Step 4: Search for task instructions in AI Search long-term memory
+        # Uses AzureAISearchContextProvider for enhanced agentic retrieval
         task_instructions = []
+        long_term_context = ""
+        
         if long_term_memory:
-            logger.info("Searching for task instructions in AI Search...")
+            # First, get context via AzureAISearchContextProvider
+            logger.info("Retrieving context via LongTermMemory with AzureAISearchContextProvider...")
             try:
-                # Run async search in sync context
+                loop = asyncio.new_event_loop()
+                long_term_context = loop.run_until_complete(
+                    long_term_memory.get_context(task)
+                )
+                loop.close()
+                if long_term_context:
+                    logger.info(f"AzureAISearchContextProvider returned context: {len(long_term_context)} chars")
+                else:
+                    logger.info("AzureAISearchContextProvider returned no context")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve context from AzureAISearchContextProvider: {e}")
+            
+            # Also get structured task instructions via hybrid search
+            logger.info("Searching for task instructions in LongTermMemory...")
+            try:
                 loop = asyncio.new_event_loop()
                 task_instructions = loop.run_until_complete(
                     long_term_memory.search_task_instructions(
@@ -1047,11 +1070,11 @@ def next_best_action_tool(task: str) -> str:
                     )
                 )
                 loop.close()
-                logger.info(f"Found {len(task_instructions)} relevant task instructions")
+                logger.info(f"Found {len(task_instructions)} relevant task instructions from LongTermMemory")
             except Exception as e:
-                logger.warning(f"Failed to retrieve task instructions from AI Search: {e}")
+                logger.warning(f"Failed to retrieve task instructions from LongTermMemory: {e}")
         else:
-            logger.info("AI Search long-term memory not configured - skipping task instructions lookup")
+            logger.info("Long-term memory not configured - skipping task instructions lookup")
         
         # Step 5: Search for domain facts in Fabric IQ facts memory
         domain_facts = []
@@ -3501,6 +3524,8 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                 )
             
             try:
+                import asyncio
+                
                 task_id = str(uuid.uuid4())
                 timestamp = datetime.utcnow().isoformat()
                 
@@ -3512,27 +3537,87 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                 logger.info("Analyzing task intent...")
                 intent = analyze_intent(task)
                 
-                # Step 3: Find similar tasks using cosine similarity
-                logger.info("Searching for similar past tasks...")
+                # Step 3: Find similar tasks using cosine similarity (short-term memory from CosmosDB)
+                logger.info("Searching for similar past tasks in CosmosDB...")
                 similar_tasks = find_similar_tasks(task_embedding, threshold=0.7, limit=5)
                 
-                # Step 4: Generate plan based on task and similar past tasks
-                logger.info("Generating execution plan...")
-                plan_steps = generate_plan(task, similar_tasks)
+                # Step 4: Search for task instructions in AI Search long-term memory
+                # Uses AzureAISearchContextProvider for enhanced agentic retrieval
+                task_instructions = []
+                long_term_context = ""
                 
-                # Step 5: Store task in CosmosDB
+                if long_term_memory:
+                    # First, get context via AzureAISearchContextProvider
+                    logger.info("Retrieving context via LongTermMemory with AzureAISearchContextProvider...")
+                    try:
+                        long_term_context = await long_term_memory.get_context(task)
+                        if long_term_context:
+                            logger.info(f"AzureAISearchContextProvider returned context: {len(long_term_context)} chars")
+                        else:
+                            logger.info("AzureAISearchContextProvider returned no context")
+                    except Exception as e:
+                        logger.warning(f"Failed to retrieve context from AzureAISearchContextProvider: {e}")
+                    
+                    # Also get structured task instructions via hybrid search
+                    logger.info("Searching for task instructions in LongTermMemory...")
+                    try:
+                        task_instructions = await long_term_memory.search_task_instructions(
+                            task_description=task,
+                            limit=3,
+                            include_steps=True
+                        )
+                        logger.info(f"Found {len(task_instructions)} relevant task instructions from LongTermMemory")
+                    except Exception as e:
+                        logger.warning(f"Failed to retrieve task instructions from LongTermMemory: {e}")
+                else:
+                    logger.info("Long-term memory not configured - skipping task instructions lookup")
+                
+                # Step 5: Search for domain facts in Fabric IQ facts memory
+                domain_facts = []
+                if facts_memory:
+                    logger.info("Searching for domain facts in Fabric IQ...")
+                    try:
+                        fact_results = await facts_memory.search_facts(
+                            query=task,
+                            domain=None,
+                            limit=5,
+                        )
+                        
+                        for result in fact_results:
+                            domain_facts.append({
+                                'id': result.fact.id,
+                                'statement': result.fact.statement,
+                                'domain': result.fact.domain,
+                                'confidence': result.fact.confidence,
+                                'relevance': result.relevance,
+                            })
+                        logger.info(f"Found {len(domain_facts)} relevant domain facts from Fabric IQ")
+                    except Exception as e:
+                        logger.warning(f"Failed to retrieve domain facts: {e}")
+                else:
+                    logger.info("Facts memory not configured - skipping domain facts lookup")
+                
+                # Step 6: Generate plan based on task, similar past tasks, and domain knowledge
+                logger.info("Generating execution plan...")
+                plan_steps = generate_plan_with_instructions(task, similar_tasks, task_instructions, domain_facts)
+                
+                # Step 7: Store task in CosmosDB
                 task_doc = {
                     'id': task_id,
                     'task': task,
                     'intent': intent,
                     'embedding': task_embedding,
                     'created_at': timestamp,
-                    'similar_task_count': len(similar_tasks)
+                    'similar_task_count': len(similar_tasks),
+                    'task_instructions_count': len(task_instructions),
+                    'domain_facts_count': len(domain_facts),
+                    'long_term_memory_used': len(task_instructions) > 0,
+                    'facts_memory_used': len(domain_facts) > 0,
                 }
                 cosmos_tasks_container.upsert_item(task_doc)
                 logger.info(f"Task stored in CosmosDB with id: {task_id}")
                 
-                # Step 6: Store plan in CosmosDB
+                # Step 8: Store plan in CosmosDB
                 plan_doc = {
                     'id': str(uuid.uuid4()),
                     'taskId': task_id,
@@ -3540,6 +3625,8 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                     'intent': intent,
                     'steps': plan_steps,
                     'similar_tasks_referenced': [{'id': st['id'], 'similarity': st['similarity']} for st in similar_tasks],
+                    'task_instructions_used': [{'name': ti.get('name', 'unknown')} for ti in task_instructions] if task_instructions else [],
+                    'domain_facts_used': [{'statement': df['statement'][:100]} for df in domain_facts] if domain_facts else [],
                     'created_at': timestamp,
                     'status': 'planned'
                 }
@@ -3560,7 +3647,17 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                                 'similarity_score': round(st['similarity'], 3)
                             }
                             for st in similar_tasks
-                        ]
+                        ],
+                        'task_instructions_found': len(task_instructions),
+                        'task_instructions': [
+                            {
+                                'name': ti.get('name', 'unknown'),
+                                'description': ti.get('description', '')[:200] if ti.get('description') else '',
+                            }
+                            for ti in task_instructions
+                        ] if task_instructions else [],
+                        'domain_facts_found': len(domain_facts),
+                        'domain_facts': domain_facts,
                     },
                     'plan': {
                         'steps': plan_steps,
@@ -3569,7 +3666,9 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                     'metadata': {
                         'created_at': timestamp,
                         'embedding_dimensions': len(task_embedding),
-                        'stored_in_cosmos': True
+                        'stored_in_cosmos': True,
+                        'long_term_memory_used': len(task_instructions) > 0,
+                        'facts_memory_used': len(domain_facts) > 0,
                     }
                 }
                 

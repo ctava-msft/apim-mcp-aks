@@ -29,7 +29,7 @@ from .base import (
     CompositeMemory,
 )
 from .cosmos_memory import ShortTermMemory
-from .aisearch_memory import LongTermMemory, FoundryIQMemory
+from .aisearch_memory import LongTermMemory, AISEARCH_CONTEXT_PROVIDER_AVAILABLE
 from .facts_memory import (
     FactsMemory,
     Fact,
@@ -76,9 +76,9 @@ __all__ = [
     "CompositeMemory",
     # Short-term memory (CosmosDB)
     "ShortTermMemory",
-    # Long-term memory (AI Search / Foundry IQ)
+    # Long-term memory (AI Search with AzureAISearchContextProvider)
     "LongTermMemory",
-    "FoundryIQMemory",
+    "AISEARCH_CONTEXT_PROVIDER_AVAILABLE",
     # Facts memory (Fabric IQ)
     "FactsMemory",
     "Fact",
