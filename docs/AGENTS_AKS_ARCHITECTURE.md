@@ -209,7 +209,7 @@ The MCP Agent uses a composite memory system combining short-term session memory
 ```mermaid
 graph TB
     subgraph "Agent Layer"
-        Agent[MCP Agent<br/>mcp_agents.py]
+        Agent[MCP Agent<br/>aks_next_best_action_agent.py]
         Tools[MCP Tools<br/>store_memory, recall_memory]
         FactsTools[Facts Tools<br/>search_facts, cross_domain_analysis]
     end

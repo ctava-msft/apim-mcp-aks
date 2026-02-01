@@ -759,9 +759,9 @@ scripts/
 └── demo_lightning_loop.py # End-to-end demo script
 ```
 
-## 🤝 Integration with mcp_agents.py
+## 🤝 Integration with aks_next_best_action_agent.py
 
-Agent Lightning is integrated into `mcp_agents.py` with minimal changes:
+Agent Lightning is integrated into `aks_next_best_action_agent.py` with minimal changes:
 
 1. **Import**: Lightning modules are imported at startup
 2. **Episode Capture**: Tool calls are captured via `execute_tool()` wrapper

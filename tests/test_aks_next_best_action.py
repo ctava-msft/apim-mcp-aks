@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Test script for the next_best_action MCP tool.
+Test script for the AKS-deployed next_best_action MCP tool.
 
-This script tests the next_best_action tool which:
+This script tests the next_best_action tool deployed via APIM + MCP + AKS which:
 1. Generates embeddings for a task using text-embedding-3-large
 2. Finds similar past tasks using cosine similarity
 3. Generates a plan of steps
 4. Stores everything in CosmosDB for future learning
 
 Usage:
-    python test_next_best_action.py
+    python test_aks_next_best_action.py
 
 Requirements:
     - aiohttp (pip install aiohttp)
-    - MCP server running with:
+    - MCP server running (aks_next_best_action_agent.py) with:
       - FOUNDRY_PROJECT_ENDPOINT configured
       - COSMOSDB_ENDPOINT configured
       - text-embedding-3-large model deployed

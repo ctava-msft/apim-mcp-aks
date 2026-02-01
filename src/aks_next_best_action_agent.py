@@ -1,10 +1,11 @@
 """
-FastAPI MCP Agents
+AKS Next Best Action Agent
+FastAPI MCP ServerS
 Implements Model Context Protocol (MCP) with SSE support
 Enhanced with Microsoft Agent Framework for AI agent capabilities
 Integrated with CosmosDB for task and plan storage with semantic reasoning
 Features Memory Provider abstraction for short-term (CosmosDB), long-term (AI Search), and facts (Fabric IQ) memory
-Integrated with Agent Lightning for fine-tuning and behavior optimization
+Includes Agent Lightning for fine-tuning and behavior optimization
 """
 
 import json
@@ -65,7 +66,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="MCP Server",
+    title="AKS Next Best Action MCP Server",
     description="Model Context Protocol Server for AI Agents with Semantic Reasoning",
     version="1.0.0"
 )
