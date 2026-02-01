@@ -1,0 +1,381 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600">
+  <defs>
+    <style>
+      @keyframes pulse {
+        0% { opacity: 0; transform: translateX(-20px); }
+        50% { opacity: 1; }
+        100% { opacity: 0; transform: translateX(20px); }
+      }
+      @keyframes glow {
+        0%, 100% { filter: drop-shadow(0 0 3px #00bcf2); }
+        50% { filter: drop-shadow(0 0 8px #00bcf2); }
+      }
+      .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
+      .pulse-dot-delay1 { animation: pulse 1.5s ease-in-out 0.3s infinite; }
+      .pulse-dot-delay2 { animation: pulse 1.5s ease-in-out 0.6s infinite; }
+      .logo-glow { animation: glow 2s ease-in-out infinite; }
+      .apim-glow { animation: glow 2s ease-in-out infinite; filter: drop-shadow(0 0 5px #9b4dca); }
+      .title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 600; fill: #fff; }
+      .title-large { font-family: 'Segoe UI', Arial, sans-serif; font-size: 24px; font-weight: 600; fill: #fff; }
+      .label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 17px; fill: #fff; }
+      .sublabel { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; fill: #aaa; }
+      .section-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; fill: #ccc; }
+      .box { rx: 8; ry: 8; }
+      .connector { stroke: #555; stroke-width: 2; fill: none; }
+      .connector-dotted { stroke: #555; stroke-width: 2; fill: none; stroke-dasharray: 5,5; }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arrowhead-down" markerWidth="6" markerHeight="8" refX="3" refY="7" orient="auto">
+      <polygon points="0 0, 6 0, 3 8" fill="#555"/>
+    </marker>
+    <!-- MCP Logo gradient -->
+    <linearGradient id="mcpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35"/>
+      <stop offset="50%" style="stop-color:#f7931e"/>
+      <stop offset="100%" style="stop-color:#ff6b35"/>
+    </linearGradient>
+    <!-- Azure gradient -->
+    <linearGradient id="azureGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0078d4"/>
+      <stop offset="100%" style="stop-color:#00bcf2"/>
+    </linearGradient>
+    <!-- Entra gradient -->
+    <linearGradient id="entraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0078d4"/>
+      <stop offset="100%" style="stop-color:#50e6ff"/>
+    </linearGradient>
+    <!-- Kubernetes gradient -->
+    <linearGradient id="k8sGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#326ce5"/>
+      <stop offset="100%" style="stop-color:#54a3ff"/>
+    </linearGradient>
+    <!-- APIM purple gradient -->
+    <linearGradient id="apimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#68217a"/>
+      <stop offset="100%" style="stop-color:#9b4dca"/>
+    </linearGradient>
+    <!-- Foundry gradient -->
+    <linearGradient id="foundryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5c2d91"/>
+      <stop offset="100%" style="stop-color:#8661c5"/>
+    </linearGradient>
+    <!-- Fabric gradient -->
+    <linearGradient id="fabricGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f25022"/>
+      <stop offset="100%" style="stop-color:#ffb900"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Dark Background -->
+  <rect width="1200" height="600" fill="#1a1a1a"/>
+  
+  <!-- ============ CALLERS BOX (Left) ============ -->
+  <rect x="20" y="25" width="204" height="210" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+  <text x="122" y="55" class="title" text-anchor="middle">Callers</text>
+  
+  <!-- Other APIs (MCP clients) -->
+  <g transform="translate(35, 75)">
+    <g class="logo-glow">
+      <circle cx="14" cy="14" r="14" fill="url(#mcpGrad)"/>
+    </g>
+    <text x="42" y="20" class="sublabel">Other MCP APIs</text>
+  </g>
+  
+  <!-- MCP Inspector -->
+  <g transform="translate(35, 120)">
+    <rect x="0" y="0" width="28" height="28" fill="#1a1a1a" stroke="url(#mcpGrad)" stroke-width="2" rx="3"/>
+    <circle cx="6" cy="10" r="2" fill="#ff5f56"/>
+    <circle cx="6" cy="14" r="2" fill="#ffbd2e"/>
+    <circle cx="6" cy="18" r="2" fill="#27ca40"/>
+    <path d="M 12 8 C 18 8 18 14 18 14 C 18 20 18 20 12 20" stroke="url(#mcpGrad)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <line x1="16" y1="8" x2="16" y2="20" stroke="url(#mcpGrad)" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="42" y="20" class="sublabel">MCP Inspector</text>
+  </g>
+  
+  <!-- VS Code -->
+  <g transform="translate(35, 170)">
+    <rect x="0" y="0" width="28" height="28" fill="#007acc" rx="3"/>
+    <text x="14" y="19" font-family="Segoe UI" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">VS</text>
+    <text x="42" y="20" class="sublabel">VS Code</text>
+  </g>
+  
+  <!-- ============ LEGEND BOX (Below Callers, aligned with Control Plane bottom) ============ -->
+  <rect x="20" y="480" width="204" height="95" fill="#252525" stroke="#666" stroke-width="1" class="box"/>
+  <text x="122" y="508" class="title" text-anchor="middle">Legend</text>
+  
+  <g transform="translate(30, 520)">
+    <circle cx="10" cy="10" r="8" fill="url(#mcpGrad)"/>
+    <text x="26" y="16" class="sublabel">MCP</text>
+  </g>
+  
+  <g transform="translate(100, 520)">
+    <g class="logo-glow">
+      <circle cx="10" cy="10" r="7" fill="#00bcf2"/>
+    </g>
+    <text x="26" y="16" class="sublabel">Data Flow</text>
+  </g>
+  
+  <g transform="translate(30, 548)">
+    <line x1="0" y1="10" x2="24" y2="10" stroke="#00bcf2" stroke-width="3" stroke-dasharray="5,4"/>
+    <text x="32" y="16" class="sublabel">Telemetry</text>
+  </g>
+  
+  <!-- ============ Connection: Callers to Control Plane ============ -->
+  <line x1="225" y1="130" x2="275" y2="130" class="connector"/>
+  <circle cx="240" cy="130" r="4" fill="#00bcf2" class="pulse-dot"/>
+  <circle cx="258" cy="130" r="4" fill="#00bcf2" class="pulse-dot-delay1"/>
+  
+  <!-- ============ AZURE AGENTS CONTROL PLANE (Main Container) ============ -->
+  <rect x="275" y="25" width="900" height="559" fill="none" stroke="#0078d4" stroke-width="2" stroke-dasharray="8,4" class="box"/>
+  <text x="725" y="48" class="title-large" text-anchor="middle">Azure Agents Control Plane</text>
+  
+  <!-- ============ Azure API Management ============ -->
+  <g transform="translate(295, 70)">
+    <rect x="0" y="0" width="290" height="350" fill="#121212" stroke="#68217a" stroke-width="2" class="box"/>
+    
+    <!-- APIM Logo with glow -->
+    <g transform="translate(12, 12)" class="apim-glow">
+      <path d="M 22 0 L 40 9 L 40 27 L 22 36 L 4 27 L 4 9 Z" fill="url(#apimGrad)"/>
+      <text x="22" y="22" font-family="Segoe UI" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">API</text>
+    </g>
+    <text x="62" y="35" class="title">Azure API Management</text>
+    
+    <!-- Policies box with gear icon -->
+    <rect x="15" y="70" width="260" height="70" fill="#68217a" stroke="#9b4dca" stroke-width="1" class="box"/>
+    <g transform="translate(28, 88)" class="apim-glow">
+      <circle cx="16" cy="16" r="14" fill="#9b4dca"/>
+      <circle cx="16" cy="16" r="8" fill="none" stroke="#fff" stroke-width="2"/>
+      <circle cx="16" cy="16" r="3" fill="#fff"/>
+      <line x1="16" y1="2" x2="16" y2="7" stroke="#fff" stroke-width="2"/>
+      <line x1="16" y1="25" x2="16" y2="30" stroke="#fff" stroke-width="2"/>
+      <line x1="2" y1="16" x2="7" y2="16" stroke="#fff" stroke-width="2"/>
+      <line x1="25" y1="16" x2="30" y2="16" stroke="#fff" stroke-width="2"/>
+    </g>
+    <text x="160" y="112" class="label" text-anchor="middle">Policies</text>
+    
+    <!-- Metrics box with icon -->
+    <rect x="15" y="160" width="125" height="70" fill="#68217a" stroke="#9b4dca" stroke-width="1" class="box"/>
+    <g transform="translate(28, 178)">
+      <rect x="0" y="0" width="32" height="32" fill="#9b4dca" rx="3"/>
+      <rect x="5" y="20" width="6" height="9" fill="#fff"/>
+      <rect x="13" y="12" width="6" height="17" fill="#fff"/>
+      <rect x="21" y="6" width="6" height="23" fill="#fff"/>
+    </g>
+    <text x="90" y="202" class="label" text-anchor="middle">Metrics</text>
+    
+    <!-- Logs box with icon -->
+    <rect x="150" y="160" width="125" height="70" fill="#68217a" stroke="#9b4dca" stroke-width="1" class="box"/>
+    <g transform="translate(163, 178)">
+      <rect x="0" y="0" width="32" height="32" fill="#9b4dca" rx="3"/>
+      <rect x="6" y="7" width="20" height="4" fill="#fff" rx="1"/>
+      <rect x="6" y="14" width="15" height="4" fill="#fff" rx="1"/>
+      <rect x="6" y="21" width="20" height="4" fill="#fff" rx="1"/>
+    </g>
+    <text x="220" y="202" class="label" text-anchor="middle">Logs</text>
+  </g>
+  
+  <!-- ============ Azure Monitor ============ -->
+  <g transform="translate(295, 439)">
+    <rect x="0" y="0" width="290" height="130" fill="#121212" stroke="#444" stroke-width="2" class="box"/>
+    <text x="145" y="32" class="title" text-anchor="middle">Azure Monitor</text>
+    
+    <!-- Metrics Chart Icon -->
+    <g transform="translate(45, 50)">
+      <rect x="0" y="0" width="50" height="42" fill="#0078d4" rx="4"/>
+      <rect x="7" y="26" width="8" height="12" fill="#fff"/>
+      <rect x="17" y="16" width="8" height="22" fill="#fff"/>
+      <rect x="27" y="21" width="8" height="17" fill="#fff"/>
+      <rect x="37" y="9" width="8" height="29" fill="#fff"/>
+      <text x="25" y="58" class="sublabel" text-anchor="middle">Metrics</text>
+    </g>
+    <!-- App Insights Icon -->
+    <g transform="translate(115, 50)">
+      <circle cx="25" cy="21" r="20" fill="#9b59b6"/>
+      <circle cx="25" cy="21" r="12" fill="none" stroke="#fff" stroke-width="2"/>
+      <circle cx="25" cy="21" r="5" fill="#fff"/>
+      <line x1="25" y1="5" x2="25" y2="12" stroke="#fff" stroke-width="2"/>
+      <text x="25" y="58" class="sublabel" text-anchor="middle">Insights</text>
+    </g>
+    <!-- Health Dashboard Icon -->
+    <g transform="translate(185, 50)">
+      <circle cx="25" cy="21" r="20" fill="#27ae60"/>
+      <path d="M 15 21 L 20 21 L 22 14 L 28 28 L 30 21 L 35 21" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="25" y="58" class="sublabel" text-anchor="middle">Health</text>
+    </g>
+  </g>
+  
+  <!-- Telemetry Arrow: APIM to Azure Monitor -->
+  <line x1="440" y1="422" x2="440" y2="437" stroke="#00bcf2" stroke-width="3" stroke-dasharray="4,3"/>
+  
+  <!-- ============ Connection: APIM to AKS ============ -->
+  <line x1="585" y1="130" x2="620" y2="130" class="connector"/>
+  <circle cx="592" cy="130" r="4" fill="#00bcf2" class="pulse-dot"/>
+  <circle cx="607" cy="130" r="4" fill="#00bcf2" class="pulse-dot-delay1"/>
+  
+  <!-- ============ Azure Kubernetes Service ============ -->
+  <g transform="translate(620, 70)">
+    <rect x="0" y="0" width="540" height="350" fill="#121212" stroke="#326ce5" stroke-width="2" class="box"/>
+    
+    <!-- AKS Header -->
+    <g transform="translate(12, 14)">
+      <g class="logo-glow">
+        <circle cx="20" cy="20" r="18" fill="url(#k8sGrad)"/>
+        <circle cx="20" cy="20" r="6" fill="none" stroke="#fff" stroke-width="1.5"/>
+        <line x1="20" y1="5" x2="20" y2="12" stroke="#fff" stroke-width="1.5"/>
+        <line x1="20" y1="28" x2="20" y2="35" stroke="#fff" stroke-width="1.5"/>
+        <line x1="5" y1="20" x2="12" y2="20" stroke="#fff" stroke-width="1.5"/>
+        <line x1="28" y1="20" x2="35" y2="20" stroke="#fff" stroke-width="1.5"/>
+        <line x1="9" y1="9" x2="14" y2="14" stroke="#fff" stroke-width="1.5"/>
+        <line x1="26" y1="26" x2="31" y2="31" stroke="#fff" stroke-width="1.5"/>
+        <line x1="31" y1="9" x2="26" y2="14" stroke="#fff" stroke-width="1.5"/>
+        <line x1="9" y1="31" x2="14" y2="26" stroke="#fff" stroke-width="1.5"/>
+      </g>
+      <text x="50" y="28" class="title">Azure Kubernetes Service</text>
+    </g>
+    
+    <!-- Agent Pods Row - moved lower -->
+    <g transform="translate(15, 70)">
+      <rect x="0" y="0" width="165" height="45" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <g class="logo-glow">
+        <circle cx="24" cy="22" r="12" fill="url(#mcpGrad)"/>
+      </g>
+      <text x="45" y="28" class="sublabel">Agent Pod</text>
+      
+      <rect x="175" y="0" width="165" height="45" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <g class="logo-glow">
+        <circle cx="199" cy="22" r="12" fill="url(#mcpGrad)"/>
+      </g>
+      <text x="220" y="28" class="sublabel">Agent Pod</text>
+      
+      <rect x="350" y="0" width="165" height="45" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <g class="logo-glow">
+        <circle cx="374" cy="22" r="12" fill="url(#mcpGrad)"/>
+      </g>
+      <text x="395" y="28" class="sublabel">Agent Pod</text>
+    </g>
+    
+    <!-- Divider -->
+    <line x1="15" y1="130" x2="525" y2="130" stroke="#444" stroke-width="1"/>
+    
+    <!-- Identity Section - moved lower -->
+    <g transform="translate(45, 155)">
+      <!-- Entra Agent Identity -->
+      <g class="logo-glow">
+        <polygon points="24,0 48,20 24,40 0,20" fill="url(#entraGrad)"/>
+        <polygon points="24,8 42,20 24,32 6,20" fill="#252525"/>
+        <polygon points="24,14 34,20 24,26 14,20" fill="url(#entraGrad)"/>
+      </g>
+      <text x="60" y="18" class="title">Entra Agent Identity</text>
+      
+      <!-- RBAC with glow - more space from Entra -->
+      <g transform="translate(280, 0)" class="logo-glow">
+        <path d="M 24 0 L 44 8 L 44 22 C 44 38 24 46 24 46 C 24 46 4 38 4 22 L 4 8 Z" fill="#27ae60" stroke="#2ecc71" stroke-width="1"/>
+        <text x="24" y="30" font-family="Segoe UI" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">✓</text>
+      </g>
+      <text x="340" y="18" class="title">RBAC Roles</text>
+    </g>
+    
+    <!-- Divider - moved lower -->
+    <line x1="15" y1="215" x2="525" y2="215" stroke="#444" stroke-width="1"/>
+    
+    <!-- Agents 365 Section - Centered vertically in bottom third -->
+    <g transform="translate(50, 250)">
+      <rect x="0" y="0" width="220" height="70" fill="#1a1a1a" stroke="#0078d4" stroke-width="2" class="box"/>
+      <g class="logo-glow">
+        <rect x="16" y="16" width="38" height="38" fill="#0078d4" rx="4"/>
+        <text x="35" y="42" font-family="Segoe UI" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">365</text>
+      </g>
+      <text x="70" y="36" class="title">Agents 365</text>
+      <text x="70" y="56" class="sublabel">Human-in-the-Loop</text>
+    </g>
+    
+    <!-- Agent Lightning Section - Centered vertically in bottom third -->
+    <g transform="translate(290, 250)">
+      <rect x="0" y="0" width="220" height="70" fill="#1a1a1a" stroke="#f7931e" stroke-width="2" class="box"/>
+      <g class="logo-glow" transform="translate(16, 14)">
+        <path d="M 18 0 L 7 20 L 15 20 L 11 42 L 32 18 L 23 18 L 28 0 Z" fill="#f7931e"/>
+      </g>
+      <text x="65" y="36" class="title">Agent Lightning</text>
+      <text x="65" y="56" class="sublabel">Fine-Tuning &amp; RL</text>
+    </g>
+  </g>
+  
+  <!-- ============ RESOURCES BOX (Under AKS) ============ -->
+  <g transform="translate(620, 439)">
+    <rect x="0" y="0" width="540" height="130" fill="#121212" stroke="#666" stroke-width="2" class="box"/>
+    <text x="270" y="24" class="title" text-anchor="middle">Resources</text>
+    
+    <!-- Azure AI Foundry -->
+    <g transform="translate(15, 32)">
+      <rect x="0" y="0" width="130" height="42" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <circle cx="22" cy="21" r="13" fill="url(#foundryGrad)"/>
+      <text x="22" y="26" font-family="Segoe UI" font-size="9" font-weight="bold" fill="#fff" text-anchor="middle">AI</text>
+      <text x="45" y="26" class="sublabel">AI Foundry</text>
+    </g>
+    
+    <!-- Foundry IQ -->
+    <g transform="translate(155, 32)">
+      <rect x="0" y="0" width="130" height="42" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <circle cx="22" cy="21" r="13" fill="url(#foundryGrad)"/>
+      <text x="22" y="26" font-family="Segoe UI" font-size="8" font-weight="bold" fill="#fff" text-anchor="middle">IQ</text>
+      <text x="45" y="26" class="sublabel">Foundry IQ</text>
+    </g>
+    
+    <!-- Microsoft Fabric -->
+    <g transform="translate(295, 32)">
+      <rect x="0" y="0" width="120" height="42" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <rect x="10" y="10" width="24" height="24" fill="url(#fabricGrad)" rx="2"/>
+      <text x="45" y="26" class="sublabel">Fabric IQ</text>
+    </g>
+    
+    <!-- Storage Account -->
+    <g transform="translate(425, 32)">
+      <rect x="0" y="0" width="100" height="42" fill="#1a1a1a" stroke="#0078d4" stroke-width="1" class="box"/>
+      <rect x="10" y="10" width="24" height="24" fill="#0078d4" rx="2"/>
+      <rect x="14" y="14" width="16" height="4" fill="#fff" rx="1"/>
+      <rect x="14" y="20" width="16" height="4" fill="#fff" rx="1"/>
+      <rect x="14" y="26" width="10" height="4" fill="#fff" rx="1"/>
+      <text x="45" y="26" class="sublabel">Storage</text>
+    </g>
+    
+    <!-- Second row -->
+    <!-- Cosmos DB -->
+    <g transform="translate(15, 85)">
+      <rect x="0" y="-4" width="130" height="38" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <circle cx="22" cy="16" r="14" fill="#0078d4"/>
+      <ellipse cx="22" cy="16" rx="7" ry="3.5" fill="#fff"/>
+      <text x="45" y="21" class="sublabel">Cosmos DB</text>
+    </g>
+    
+    <!-- Key Vault -->
+    <g transform="translate(155, 85)">
+      <rect x="0" y="-4" width="130" height="38" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <rect x="10" y="3" width="24" height="24" fill="#f7931e" rx="2"/>
+      <circle cx="22" cy="13" r="6" fill="none" stroke="#fff" stroke-width="1.5"/>
+      <rect x="19" y="18" width="6" height="8" fill="#fff" rx="1"/>
+      <text x="45" y="21" class="sublabel">Key Vault</text>
+    </g>
+    
+    <!-- ACR -->
+    <g transform="translate(295, 85)">
+      <rect x="0" y="-4" width="120" height="38" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <rect x="10" y="3" width="24" height="24" fill="#0078d4" rx="2"/>
+      <rect x="14" y="7" width="16" height="16" fill="none" stroke="#fff" stroke-width="1.5" rx="1"/>
+      <rect x="17" y="10" width="10" height="10" fill="#fff" rx="1"/>
+      <text x="45" y="21" class="sublabel">ACR</text>
+    </g>
+    
+    <!-- Private Networking -->
+    <g transform="translate(425, 85)">
+      <rect x="0" y="-4" width="100" height="38" fill="#1a1a1a" stroke="#666" stroke-width="1" class="box"/>
+      <path d="M 10 16 L 34 16" stroke="#27ae60" stroke-width="2"/>
+      <circle cx="10" cy="16" r="5" fill="#27ae60"/>
+      <circle cx="34" cy="16" r="5" fill="#27ae60"/>
+      <path d="M 18 9 L 26 9 L 26 23 L 18 23 Z" fill="none" stroke="#27ae60" stroke-width="1.5"/>
+      <text x="44" y="12" font-family="Segoe UI" font-size="11" fill="#aaa">Private</text>
+      <text x="44" y="24" font-family="Segoe UI" font-size="11" fill="#aaa">Network</text>
+    </g>
+  </g>
+</svg>

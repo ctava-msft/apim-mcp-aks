@@ -1,4 +1,4 @@
-# System Architecture Diagrams
+# System Architecture
 
 This document provides comprehensive Mermaid diagrams for the AI Agents with AKS and APIM solution.
 

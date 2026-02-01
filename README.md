@@ -1,28 +1,44 @@
-# MCP Server on AKS with APIM Gateway
+# Azure Agents Control Plane
 
-Deploy Model Context Protocol (MCP) servers on Azure Kubernetes Service with Azure API Management as a secure gateway.
+The Azure Agents Control Plane governs the complete lifecycle of enterprise AI agents: analysis, design, development, testing, fine-tuning, and evaluation. It enables enterprise-grade AI agent development where Azure provides centralized governance, observability, identity, and compliance—regardless of agent execution location.
 
-## Architecture
+**Core Principles:**
+- **Azure as Enterprise Control Plane** - Centralized governance with single or multi-cloud execution capability
+- **Specification-Driven Development** - SpecKit methodology ensures structured analysis, design, testing, fine tuning and evaluations
+- **API-First Agent Architecture** - All agent operations flow through Azure API Management with Model Context Protocol (MCP) defining capabilities
+- **Identity-First Security** - Every agent receives a Microsoft Entra ID Agent identity with least-privilege role based authorization control (RBAC)
+- **Continuous Evaluation & Improvement** - Agent Lightning enables fine-tuning through reinforcement learning
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│   AI Agent      │────▶│  Azure API Management│────▶│  AKS Cluster    │
-│ (Claude, etc.)  │     │  (OAuth + Gateway)   │     │  (MCP Server)   │
-└─────────────────┘     └──────────────────────┘     └─────────────────┘
-                                   │                         │
-                                   ▼                         ▼
-                        ┌──────────────────┐      ┌─────────────────┐
-                        │  Azure Entra ID  │      │  Azure Storage  │
-                        │  (Authentication)│      │  (Snippets)     │
-                        └──────────────────┘      └─────────────────┘
-```
+![System Architecture](overview.svg)
 
-**Components:**
-- **AKS Cluster** - Hosts MCP server pods with workload identity
-- **API Management** - OAuth 2.0 gateway with rate limiting
-- **Static Public IP** - Stable endpoint for LoadBalancer service
-- **Azure Storage** - Persistent storage for snippets
-- **Entra ID** - Authentication provider
+For detailed architecture diagrams and component specifications, see [docs/AGENTS_AKS_ARCHITECTURE.md](docs/AGENTS_AKS_ARCHITECTURE.md).
+
+---
+
+## Agent Specifications (SpecKit)
+
+This project follows the [SpecKit Methodology](https://speckit.dev) for agent governance. Specifications are stored in `.speckit/` and define:
+
+- **Constitution** - Core principles, standards, and governance framework
+- **Agent Specifications** - Use case analysis, design, implementation, testing, fine-tuning, and evaluation for each agent
+
+### Governance Model
+
+| Agent Type | Description |
+|------------|-------------|
+| **Single Agent** | One agent with multiple tools |
+| **Multi-Agent Orchestrated** | Multiple specialized agents working together |
+| **Multi-Agent with Approvals** | Orchestrated agents with human oversight |
+
+### Autonomy Levels
+
+| Level | Description |
+|-------|-------------|
+| **Full Autonomous** | Agent operates without human approval |
+| **Semi Autonomous** | Human approval for specific conditions |
+| **Not Autonomous** | Every action requires approval |
+
+---
 
 ## Deployment
 
@@ -33,263 +49,109 @@ Deploy Model Context Protocol (MCP) servers on Azure Kubernetes Service with Azu
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Docker](https://docs.docker.com/get-docker/)
 
-### Deploy Everything (Recommended)
+### Quick Start
 
-The `azd up` command deploys infrastructure AND automatically configures:
+```bash
+azd auth login
+azd up
+```
+
+The `azd up` command deploys all infrastructure and automatically configures:
 - AKS cluster with Container Registry
 - API Management with OAuth endpoints
-- Static public IP for LoadBalancer
 - MCP server deployment with workload identity
 - LoadBalancer service connected to APIM backend
 
-```bash
-azd auth login
-azd up
-```
+### Two-Phase Deployment (with Agent Identity)
 
-The post-provision hook automatically:
-1. Configures AKS credentials and RBAC
-2. Attaches ACR to AKS
-3. Creates federated identity for workload identity
-4. Builds and pushes the MCP server container image
-5. Deploys Kubernetes resources (deployment + LoadBalancer)
-6. Generates test configuration
-
-### Manual Deployment (Advanced)
-
-If you need to deploy manually or redeploy:
-
-```bash
-# Get AKS credentials
-az aks get-credentials --resource-group <rg-name> --name <aks-name> --admin
-
-# Build and push image
-./scripts/build-and-push.ps1  # or .sh
-
-# Deploy to AKS
-kubectl apply -f k8s/mcp-agents-deployment-configured.yaml
-kubectl apply -f k8s/mcp-agents-loadbalancer-configured.yaml
-```
-
-## Readiness Test
-
-### Verify Pods
-
-```bash
-kubectl get pods -n mcp-agents
-```
-
-Expected output:
-```
-NAME                         READY   STATUS    RESTARTS   AGE
-mcp-agents-xxx-xxx           1/1     Running   0          1m
-```
-
-### Verify LoadBalancer
-
-```bash
-kubectl get svc -n mcp-agents mcp-agents-loadbalancer
-```
-
-Expected output shows the static public IP assigned.
-
-### Run Integration Tests
-
-```bash
-python tests/test_apim_mcp_connection.py --use-az-token
-```
-
-This runs both infrastructure and MCP protocol tests.
-
-Options:
-- `--use-az-token` - Automatic token (no browser required)
-- `--skip-infra` - Skip AKS infrastructure tests
-- `--generate-token` - Interactive OAuth token generation
-
----
-
-## Fully Automated Deployment
-
-### Two-Phase Deployment Process
-
-The deployment uses a two-phase approach to handle Entra Agent Identity requirements:
-
-**Phase 1: Core Infrastructure** (Agent Identity disabled)
-```powershell
-# Login to Azure
-azd auth login
-
-# Disable Agent Identity for initial deployment
-azd env set AZURE_AGENT_IDENTITY_ENABLED false
-
-# Deploy core infrastructure
-azd up
-```
-
-**Phase 2: Enable Agent Identity** (after core infrastructure is ready)
-```powershell
-# Enable Agent Identity
-azd env set AZURE_AGENT_IDENTITY_ENABLED true
-
-# Re-provision to create Agent Identity
-azd provision
-```
-
-### Why Two Phases?
-
-The Agent Identity Blueprint requires:
-1. A storage account for deployment scripts (created in Phase 1)
-2. Key-based authentication or managed identity access (configured in Phase 1)
-
-By deploying core infrastructure first, we ensure all dependencies are in place before creating the Agent Identity.
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AZURE_AGENT_IDENTITY_ENABLED` | `true` | Enable/disable Entra Agent Identity |
-| `AZURE_LOCATION` | `eastus2` | Azure region for deployment |
-| `FABRIC_ENABLED` | `false` | Enable Microsoft Fabric integration |
-
-### Complete Automated Script
+For deployments requiring Entra Agent Identity:
 
 ```powershell
-# Full automated deployment script
-azd auth login
-
 # Phase 1: Core Infrastructure
+azd auth login
 azd env set AZURE_AGENT_IDENTITY_ENABLED false
 azd up --no-prompt
 
-# Wait for deployment to stabilize
-Start-Sleep -Seconds 30
-
-# Phase 2: Enable Agent Identity  
+# Phase 2: Enable Agent Identity
 azd env set AZURE_AGENT_IDENTITY_ENABLED true
 azd provision --no-prompt
+```
 
-# Verify deployment
+---
+
+## Verification
+
+```bash
+# Verify pods
 kubectl get pods -n mcp-agents
-kubectl get svc -n mcp-agents
 
-# Run tests
+# Verify LoadBalancer
+kubectl get svc -n mcp-agents mcp-agents-loadbalancer
+
+# Run integration tests
 python tests/test_apim_mcp_connection.py --use-az-token
 ```
 
-### Troubleshooting
+---
 
-#### DeploymentActive Error
-If you see "DeploymentActive" error, wait 60 seconds and retry:
-```powershell
-Start-Sleep -Seconds 60
-azd provision --no-prompt
-```
+## Documentation
 
-#### Storage Key Authentication Error
-This occurs when Agent Identity is enabled before storage account is ready. Use the two-phase deployment process above.
-
-#### APIM Soft-Delete Conflict
-```powershell
-az apim deletedservice purge --service-name <apim-name> --location eastus2
-```
+| Document | Description |
+|----------|-------------|
+| [AGENTS_AKS_ARCHITECTURE.md](docs/AGENTS_AKS_ARCHITECTURE.md) | System architecture and component diagrams |
+| [AGENTS_AKS_DEPLOYMENT_NOTES.md](docs/AGENTS_AKS_DEPLOYMENT_NOTES.md) | Detailed deployment notes |
+| [AGENTS_AKS_IDENTITY_DESIGN.md](docs/AGENTS_AKS_IDENTITY_DESIGN.md) | Identity architecture design |
+| [AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md](docs/AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md) | Fine-tuning and RL documentation |
+| [AGENTS_AKS_AGENT_LIGHTNING_TEST_RESULTS.md](docs/AGENTS_AKS_AGENT_LIGHTNING_TEST_RESULTS.md) | Lightning test results |
+| [AGENTS_AKS_EVALUATIONS.md](docs/AGENTS_AKS_EVALUATIONS.md) | Agent evaluation framework |
+| [AGENTS_AKS_TEST_RESULTS.md](docs/AGENTS_AKS_TEST_RESULTS.md) | Integration test results |
 
 ---
 
-## Identity Architecture
+## References
 
-This deployment uses multiple managed identities:
+### Azure Services
+- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry)
+- [Azure AI Search](https://learn.microsoft.com/azure/search/)
+- [Azure API Management](https://learn.microsoft.com/azure/api-management/)
+- [Azure Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
+- [Azure CLI](https://learn.microsoft.com/cli/azure/)
+- [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
+- [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/)
+- [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/)
+- [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/)
+- [Azure Storage](https://learn.microsoft.com/azure/storage/)
+- [Foundry IQ](https://learn.microsoft.com/azure/ai-services/agents/concepts/foundry-iq)
+- [Microsoft Fabric](https://learn.microsoft.com/fabric/)
+- [Microsoft Fabric IQ](https://learn.microsoft.com/fabric/get-started/fabric-iq)
 
-| Identity | Purpose | Scope |
-|----------|---------|-------|
-| `id-aks-*` | AKS control plane operations | Cluster management |
-| `id-mcp-*` | MCP workload identity (legacy) | Pod authentication |
-| `id-agent-*` | Entra Agent Identity | AI agent authentication |
-| `id-api-*` | API Management identity | APIM operations |
-| `id-ai-*` | AI Services identity | Model access |
+### Identity & Security
+- [Microsoft Entra ID](https://learn.microsoft.com/entra/identity/)
+- [Microsoft Entra Agent Identity](https://learn.microsoft.com/entra/workload-id/)
+- [Workload Identity Federation](https://learn.microsoft.com/azure/aks/workload-identity-overview)
 
-See [docs/IDENTITY_DESIGN.md](docs/IDENTITY_DESIGN.md) for detailed identity architecture.
+### Agent Frameworks & Tools
+- [Agent Lightning](docs/AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md) - Fine-tuning and reinforcement learning
+- [Agents 365](https://learn.microsoft.com/microsoft-365-copilot/extensibility/) - Human-in-the-Loop integration
+- [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
+- [Microsoft Agent Framework](https://learn.microsoft.com/azure/ai-services/agents/)
+- [Model Context Protocol](https://modelcontextprotocol.io)
+- [SpecKit Methodology](https://speckit.dev)
 
----
+### Python Frameworks
+- [aiohttp](https://docs.aiohttp.org/)
+- [Azure Identity SDK](https://learn.microsoft.com/python/api/azure-identity/)
+- [Azure AI Evaluation SDK](https://learn.microsoft.com/azure/ai-studio/how-to/develop/evaluate-sdk)
+- [Azure Cosmos SDK](https://learn.microsoft.com/python/api/azure-cosmos/)
+- [Azure Search Documents SDK](https://learn.microsoft.com/python/api/azure-search-documents/)
+- [Azure Storage Blob SDK](https://learn.microsoft.com/python/api/azure-storage-blob/)
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [NumPy](https://numpy.org/)
+- [Pydantic](https://docs.pydantic.dev/)
+- [Python](https://www.python.org/)
+- [python-dotenv](https://pypi.org/project/python-dotenv/)
+- [Uvicorn](https://www.uvicorn.org/)
 
-## Configuration
-
-### Kubernetes Environment Variables
-
-The MCP server pods are configured with these environment variables:
-
-```yaml
-# Azure Identity
-AZURE_CLIENT_ID: <managed-identity-client-id>
-
-# AI Services
-FOUNDRY_PROJECT_ENDPOINT: https://<ai-services>.services.ai.azure.com/api/projects/<project>
-FOUNDRY_MODEL_DEPLOYMENT_NAME: <chat-model-deployment>
-EMBEDDING_MODEL_DEPLOYMENT_NAME: <embedding-model-deployment>
-
-# Data Services
-COSMOSDB_ENDPOINT: https://<cosmos>.documents.azure.com:443/
-COSMOSDB_DATABASE_NAME: mcpdb
-AZURE_SEARCH_ENDPOINT: https://<search>.search.windows.net
-AZURE_SEARCH_INDEX_NAME: task-instructions
-
-# Storage
-AZURE_STORAGE_ACCOUNT_URL: https://<storage>.blob.core.windows.net/
-ONTOLOGY_CONTAINER_NAME: ontologies
-
-# Feature Flags
-FABRIC_ENABLED: false
-```
-
----
-
-## Agent Lightning (Fine-Tuning & RL)
-
-Agent Lightning enables reinforcement learning and fine-tuning for MCP agents. It captures agent interactions, labels them with rewards, builds training datasets, and manages fine-tuned model deployments.
-
-### Enable Lightning Capture
-
-1. **Deploy Lightning Cosmos containers** (automatically included in `azd provision`):
-   - Database: `agent_rl`
-   - Containers: `rl_episodes`, `rl_rewards`, `rl_datasets`, `rl_training_runs`, `rl_deployments`
-
-2. **Enable capture in Kubernetes**:
-   ```bash
-   kubectl set env deployment/mcp-agents -n mcp-agents ENABLE_LIGHTNING_CAPTURE=true
-   ```
-
-3. **Verify Lightning is working**:
-   ```bash
-   python tests/test_demo_lightning_loop.py --direct
-   ```
-
-### Lightning Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENABLE_LIGHTNING_CAPTURE` | `false` | Enable episode capture for training |
-| `USE_TUNED_MODEL` | `false` | Use fine-tuned model if available |
-| `LIGHTNING_AGENT_ID` | `mcp-agents` | Agent identifier for episodes |
-| `COSMOS_ACCOUNT_URI` | Same as `COSMOSDB_ENDPOINT` | Cosmos endpoint for Lightning |
-| `COSMOS_DATABASE_NAME` | `agent_rl` | Lightning database name |
-
-### Lightning Workflow
-
-```
-1. Capture Episodes     →  ask_foundry, next_best_action calls
-2. Label with Rewards   →  python -m lightning.cli label
-3. Build Dataset        →  python -m lightning.cli build-dataset
-4. Fine-tune Model      →  python -m lightning.cli train
-5. Promote Model        →  python -m lightning.cli promote
-6. Enable Tuned Model   →  kubectl set env ... USE_TUNED_MODEL=true
-```
-
-See [docs/AGENT-LIGHTNING.md](docs/AGENT-LIGHTNING.md) for complete documentation.
-
----
-
-## Additional Documentation
-
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture diagrams
-- [DEPLOYMENT_NOTES.md](docs/DEPLOYMENT_NOTES.md) - Detailed deployment notes
-- [IDENTITY_DESIGN.md](docs/IDENTITY_DESIGN.md) - Identity architecture design
-- [AGENT-LIGHTNING.md](docs/AGENT-LIGHTNING.md) - Fine-tuning and RL documentation
+### DevOps Tools
+- [Docker](https://docs.docker.com/)
+- [kubectl](https://kubernetes.io/docs/reference/kubectl/)
