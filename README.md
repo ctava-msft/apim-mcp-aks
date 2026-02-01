@@ -11,7 +11,7 @@ The Azure Agents Control Plane governs the complete lifecycle of enterprise AI a
 
 ![System Architecture](overview.svg)
 
-For detailed architecture diagrams and component specifications, see [docs/AGENTS_AKS_ARCHITECTURE.md](docs/AGENTS_AKS_ARCHITECTURE.md).
+For detailed architecture diagrams and component specifications, see [docs/AGENTS_ARCHITECTURE.md](docs/AGENTS_ARCHITECTURE.md).
 
 ---
 
@@ -113,13 +113,13 @@ python tests/test_apim_mcp_connection.py --use-az-token
 
 | Document | Description |
 |----------|-------------|
-| [AGENTS_AKS_ARCHITECTURE.md](docs/AGENTS_AKS_ARCHITECTURE.md) | System architecture and component diagrams |
-| [AGENTS_AKS_DEPLOYMENT_NOTES.md](docs/AGENTS_AKS_DEPLOYMENT_NOTES.md) | Detailed deployment notes |
-| [AGENTS_AKS_IDENTITY_DESIGN.md](docs/AGENTS_AKS_IDENTITY_DESIGN.md) | Identity architecture design |
-| [AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md](docs/AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md) | Fine-tuning and RL documentation |
-| [AGENTS_AKS_AGENT_LIGHTNING_TEST_RESULTS.md](docs/AGENTS_AKS_AGENT_LIGHTNING_TEST_RESULTS.md) | Lightning test results |
-| [AGENTS_AKS_EVALUATIONS.md](docs/AGENTS_AKS_EVALUATIONS.md) | Agent evaluation framework |
-| [AGENTS_AKS_TEST_RESULTS.md](docs/AGENTS_AKS_TEST_RESULTS.md) | Integration test results |
+| [AGENTS_ARCHITECTURE.md](docs/AGENTS_ARCHITECTURE.md) | System architecture and component diagrams |
+| [AGENTS_DEPLOYMENT_NOTES.md](docs/AGENTS_DEPLOYMENT_NOTES.md) | Detailed deployment notes |
+| [AGENTS_IDENTITY_DESIGN.md](docs/AGENTS_IDENTITY_DESIGN.md) | Identity architecture design |
+| [AGENTS_AGENT_LIGHTNING_DESIGN.md](docs/AGENTS_AGENT_LIGHTNING_DESIGN.md) | Fine-tuning and RL documentation |
+| [AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md](docs/AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md) | Lightning test results |
+| [AGENTS_EVALUATIONS.md](docs/AGENTS_EVALUATIONS.md) | Agent evaluation framework |
+| [AGENTS_TEST_RESULTS.md](docs/AGENTS_TEST_RESULTS.md) | Integration test results |
 
 ---
 
@@ -146,7 +146,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 - [Workload Identity Federation](https://learn.microsoft.com/azure/aks/workload-identity-overview)
 
 ### Agent Frameworks & Tools
-- [Agent Lightning](docs/AGENTS_AKS_AGENT_LIGHTNING_DESIGN.md) - Fine-tuning and reinforcement learning
+- [Agent Lightning](docs/AGENTS_AGENT_LIGHTNING_DESIGN.md) - Fine-tuning and reinforcement learning
 - [Agents 365](https://learn.microsoft.com/microsoft-365-copilot/extensibility/) - Human-in-the-Loop integration
 - [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
 - [Microsoft Agent Framework](https://learn.microsoft.com/azure/ai-services/agents/)

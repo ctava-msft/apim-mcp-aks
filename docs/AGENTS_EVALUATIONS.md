@@ -33,7 +33,7 @@ Six **(6)** new MCP tools were added to the AKS FastAPI server that run evaluati
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  AKS Cluster (mcp-agents namespace)                                     │ │
 │  │  ┌─────────────────────────────────────────────────────────────────┐   │ │
-│  │  │  FastAPI MCP Server (aks_next_best_action_agent.py)              │   │ │
+│  │  │  FastAPI MCP Server (next_best_action_agent.py)              │   │ │
 │  │  │                                                                   │   │ │
 │  │  │  Evaluation MCP Tools:                                            │   │ │
 │  │  │  • get_evaluation_status                                          │   │ │
@@ -394,6 +394,6 @@ This is expected - evaluations must run on the AKS cluster which has VNet access
 
 ## Related Documentation
 
-- [AGENTS_AKS_ARCHITECTURE.md](AGENTS_AKS_ARCHITECTURE.md) - Overall system architecture
-- [AGENTS_AKS_DEPLOYMENT_NOTES.md](AGENTS_AKS_DEPLOYMENT_NOTES.md) - Deployment procedures
-- [AGENTS_AKS_IDENTITY_DESIGN.md](AGENTS_AKS_IDENTITY_DESIGN.md) - Workload identity configuration
+- [AGENTS_ARCHITECTURE.md](AGENTS_ARCHITECTURE.md) - Overall system architecture
+- [AGENTS_DEPLOYMENT_NOTES.md](AGENTS_DEPLOYMENT_NOTES.md) - Deployment procedures
+- [AGENTS_IDENTITY_DESIGN.md](AGENTS_IDENTITY_DESIGN.md) - Workload identity configuration

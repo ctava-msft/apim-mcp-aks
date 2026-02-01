@@ -9,11 +9,11 @@ This script tests the next_best_action tool deployed via APIM + MCP + AKS which:
 4. Stores everything in CosmosDB for future learning
 
 Usage:
-    python test_aks_next_best_action.py
+    python test_next_best_action.py
 
 Requirements:
     - aiohttp (pip install aiohttp)
-    - MCP server running (aks_next_best_action_agent.py) with:
+    - MCP server running (next_best_action_agent.py) with:
       - FOUNDRY_PROJECT_ENDPOINT configured
       - COSMOSDB_ENDPOINT configured
       - text-embedding-3-large model deployed

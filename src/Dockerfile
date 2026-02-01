@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY aks_next_best_action_agent.py .
+COPY next_best_action_agent.py .
 
 # Copy memory module
 COPY memory/ ./memory/
@@ -39,4 +39,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application
-CMD ["uvicorn", "aks_next_best_action_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "next_best_action_agent:app", "--host", "0.0.0.0", "--port", "8000"]

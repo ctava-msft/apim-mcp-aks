@@ -27,7 +27,7 @@ class DeploymentRegistry:
     """
     Manages tuned model deployments.
     
-    This registry is queried by aks_next_best_action_agent.py to determine which model
+    This registry is queried by next_best_action_agent.py to determine which model
     deployment to use for a given agent.
     
     Usage:
@@ -134,7 +134,7 @@ class DeploymentRegistry:
         """
         Get the active tuned model name for an agent.
         
-        This is the primary method called by aks_next_best_action_agent.py to determine
+        This is the primary method called by next_best_action_agent.py to determine
         which model to use.
         
         Selection order:

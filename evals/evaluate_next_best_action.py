@@ -83,7 +83,7 @@ CONFIG_FILE = Path(__file__).parent.parent / 'tests' / 'mcp_test_config.json'
 
 
 # =============================================================================
-# MCP CLIENT (adapted from test_aks_next_best_action.py)
+# MCP CLIENT (adapted from test_next_best_action.py)
 # =============================================================================
 
 class MCPClient:
