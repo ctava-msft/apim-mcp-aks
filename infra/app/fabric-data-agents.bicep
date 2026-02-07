@@ -33,7 +33,7 @@ param location string = resourceGroup().location
 param tags object = {}
 
 @description('Enable Fabric Data Agents (default: true when Fabric is enabled)')
-param fabricDataAgentsEnabled bool = true
+param fabricDataAgentsEnabled bool = false
 
 @description('Unique suffix for role assignment names')
 param deploymentSuffix string = 'fabric-data-v1'

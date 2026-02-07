@@ -17,7 +17,7 @@ import logging
 import os
 import json
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 
 from azure.identity import DefaultAzureCredential
@@ -75,19 +75,22 @@ class FabricAPIClient:
         self._token_expiry = None
     
     def _get_token(self) -> str:
-        """Get access token for Fabric API"""
-        # Simple token caching (production should use more sophisticated caching)
+        """
+        Get access token for Fabric API with caching.
+        
+        TODO: Implement thread-safe token cache with proper locking for concurrent requests
+        and integrate with azure-identity's built-in token caching mechanisms.
+        """
+        # Check if cached token is still valid
         if self._token_cache and self._token_expiry:
-            from datetime import datetime, timedelta
-            if datetime.now() < self._token_expiry:
+            if datetime.now(timezone.utc) < self._token_expiry:
                 return self._token_cache
         
         token = self.credential.get_token(FABRIC_RESOURCE_SCOPE)
         self._token_cache = token.token
         # token.expires_on is an absolute timestamp (seconds since epoch)
         # Refresh 5 minutes before expiry
-        from datetime import datetime, timedelta
-        self._token_expiry = datetime.fromtimestamp(token.expires_on) - timedelta(minutes=5)
+        self._token_expiry = datetime.fromtimestamp(token.expires_on, tz=timezone.utc) - timedelta(minutes=5)
         return token.token
     
     def _make_request(
