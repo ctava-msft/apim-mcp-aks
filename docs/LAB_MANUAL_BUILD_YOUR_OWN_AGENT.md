@@ -9,6 +9,34 @@ This lab guides you through creating a new AI agent using the **SpecKit methodol
 
 ---
 
+## Introduction
+
+### What is the Azure Agents Control Plane?
+
+The Azure Agents Control Plane is a comprehensive solution accelerator that governs the complete lifecycle of enterprise AI agents:
+
+- **Analysis** - Understanding business problems and requirements
+- **Design** - Creating agent specifications and architecture
+- **Development** - Building agents with Copilot and SpecKit methodology
+- **Testing** - Validating agent behavior and compliance
+- **Deployment** - Releasing agents to governed runtimes
+- **Observation** - Monitoring agent behavior and performance
+- **Evaluation** - Measuring agent quality and task adherence
+- **Fine-Tuning** - Optimizing agent responses through reinforcement learning
+
+### Why Azure as the Enterprise Control Plane?
+
+Traditional AI agent demos focus on getting something working quickly. However, enterprise deployments require:
+
+- **Centralized Governance** - Policy enforcement, rate limiting, and compliance tracking
+- **Identity-First Security** - Every agent has a Microsoft Entra ID identity with RBAC
+- **API-First Architecture** - All agent operations flow through Azure API Management
+- **Multi-Cloud Capable** - Agents can execute anywhere while being governed by Azure
+- **Continuous Improvement** - Built-in evaluation and fine-tuning pipelines
+- **Human Oversight** - Agent 365 integration for human-in-the-loop workflows
+
+---
+
 ## Table of Contents
 
 1. [Lab Objectives](#lab-objectives)
@@ -20,7 +48,12 @@ This lab guides you through creating a new AI agent using the **SpecKit methodol
 7. [Part 5: Containerizing Your Agent](#part-5-containerizing-your-agent)
 8. [Part 6: Deploying to AKS](#part-6-deploying-to-aks)
 9. [Part 7: Verification and Testing](#part-7-verification-and-testing)
-10. [Part 8: Next Steps](#part-8-next-steps)
+10. [Part 8: End-to-End Governance Review](#part-8-end-to-end-governance-review)
+11. [Part 9: Fine-Tuning with Agent Lightning](#part-9-fine-tuning-with-agent-lightning)
+12. [Part 10: Evaluations](#part-10-evaluations)
+13. [Part 11: Next Steps](#part-11-next-steps)
+14. [Optional Extensions](#optional-extensions)
+15. [References](#references)
 
 ---
 
@@ -28,12 +61,33 @@ This lab guides you through creating a new AI agent using the **SpecKit methodol
 
 By the end of this lab, you will be able to:
 
+### Building Your Agent
 - ✅ Create a SpecKit constitution that defines governance principles for your agent
 - ✅ Write a structured agent specification following the SpecKit methodology
 - ✅ Implement an MCP-compliant agent using FastAPI
 - ✅ Containerize your agent with Docker
 - ✅ Deploy your agent to AKS as a new pod
 - ✅ Integrate with the Azure Agents Control Plane infrastructure
+
+### Enterprise Governance
+- ✅ Understand how Azure API Management acts as the governance gateway
+- ✅ Inspect APIM policies that enforce rate limits, quotas, and compliance
+- ✅ Trace requests through the control plane using distributed tracing
+
+### Security & Identity
+- ✅ Configure workload identity federation for AKS pods
+- ✅ Implement least-privilege RBAC for agent tool access
+- ✅ Validate keyless authentication patterns
+
+### Observability
+- ✅ Monitor agent behavior using Azure Monitor and Application Insights
+- ✅ Query telemetry with Kusto Query Language (KQL)
+
+### Evaluation & Fine-Tuning
+- ✅ Run structured evaluations measuring intent resolution, tool accuracy, and task adherence
+- ✅ Capture agent episodes for training data collection
+- ✅ Label episodes with rewards (human or automated)
+- ✅ Fine-tune models using Agent Lightning
 
 ---
 
@@ -1176,7 +1230,316 @@ pytest test_my_agent.py -v
 
 ---
 
-## Part 8: Next Steps
+## Part 8: End-to-End Governance Review
+
+**Duration:** 45 minutes
+
+**Objective:** Inspect and understand the governance mechanisms across APIM policies, identity, memory, and observability.
+
+### Step 8.1: Inspect APIM Policies
+
+Navigate to Azure Portal → API Management → APIs → MCP API → Policies.
+
+Review the inbound policies:
+
+```xml
+<policies>
+    <inbound>
+        <!-- OAuth validation -->
+        <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+            <openid-config url="https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration" />
+            <audiences>
+                <audience>{client-id}</audience>
+            </audiences>
+        </validate-jwt>
+        
+        <!-- Rate limiting -->
+        <rate-limit-by-key calls="100" renewal-period="60" 
+                          counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization",""))" />
+        
+        <!-- Quota enforcement -->
+        <quota-by-key calls="10000" renewal-period="86400" 
+                     counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization",""))" />
+        
+        <!-- Routing based on agent -->
+        <set-backend-service backend-id="mcp-agents-backend" />
+        
+        <!-- Add correlation ID for tracing -->
+        <set-header name="X-Correlation-ID" exists-action="skip">
+            <value>@(Guid.NewGuid().ToString())</value>
+        </set-header>
+    </inbound>
+</policies>
+```
+
+**Questions to Answer:**
+
+- What happens if an unauthenticated request is made?
+- What is the rate limit per minute?
+- How are requests traced across services?
+
+### Step 8.2: Review Memory in Cosmos DB and AI Search
+
+**Cosmos DB (Short-Term Memory):**
+
+```bash
+# Query recent agent sessions
+az cosmosdb sql query \
+  --account-name <your-cosmosdb> \
+  --database-name agents \
+  --container-name sessions \
+  --query "SELECT * FROM c WHERE c.agent_id = 'my-agent' ORDER BY c._ts DESC OFFSET 0 LIMIT 5"
+```
+
+**AI Search (Long-Term Memory):**
+
+```bash
+# Search for agent data
+az search query \
+  --service-name <your-search-service> \
+  --index-name agent-memory \
+  --search-text "my-agent" \
+  --select "agent_id,data,timestamp"
+```
+
+### Step 8.3: Validate Identity and RBAC
+
+Inspect the managed identity assigned to your agent pods:
+
+```bash
+# Get service account
+kubectl get serviceaccount my-agent-sa -n mcp-agents -o yaml
+
+# Verify workload identity annotation
+# Expected: azure.workload.identity/client-id: <agent-managed-identity-id>
+
+# Check federated credentials
+az identity federated-credential list \
+  --identity-name <agent-managed-identity> \
+  --resource-group <your-rg>
+```
+
+Review RBAC assignments:
+
+```bash
+# List role assignments for the agent identity
+az role assignment list \
+  --assignee <agent-managed-identity-client-id> \
+  --all
+```
+
+**Expected Roles:**
+
+- `Cognitive Services User` - For Azure AI Foundry access
+- `Storage Blob Data Contributor` - For Azure Storage access
+- `Cosmos DB Account Reader Role` - For Cosmos DB access
+- `Search Index Data Reader` - For AI Search access
+
+### Step 8.4: Examine Telemetry in Application Insights
+
+Navigate to Azure Portal → Application Insights → Transaction Search.
+
+Filter by:
+- **Operation Name:** `POST /tools/call`
+- **Time Range:** Last 1 hour
+
+Run a KQL query to analyze tool usage:
+
+```kusto
+dependencies
+| where name contains "tools/call"
+| extend tool_name = tostring(customDimensions["tool_name"])
+| summarize count() by tool_name
+| order by count_ desc
+```
+
+**Questions to Answer:**
+
+- Which tool is called most frequently?
+- What is the P95 latency for tool calls?
+- Are there any failed requests?
+
+---
+
+## Part 9: Fine-Tuning with Agent Lightning
+
+**Duration:** 60 minutes
+
+**Objective:** Identify sub-optimal agent behavior, capture episodes, label with rewards, fine-tune a model, and validate improvements.
+
+### Context
+
+Agent Lightning implements a reinforcement learning feedback loop:
+
+1. **Capture** - Record agent interactions (episodes)
+2. **Label** - Assign rewards (human or automated)
+3. **Build** - Create training datasets
+4. **Train** - Fine-tune models
+5. **Deploy** - Promote tuned models to production
+
+### Step 9.1: Enable Episode Capture
+
+Update your agent configuration to enable episode capture:
+
+```bash
+kubectl set env deployment/my-agent \
+  -n mcp-agents \
+  ENABLE_EPISODE_CAPTURE=true
+```
+
+Make several agent requests to generate episodes.
+
+### Step 9.2: Review Captured Episodes
+
+Query Cosmos DB for captured episodes:
+
+```bash
+az cosmosdb sql query \
+  --account-name <your-cosmosdb> \
+  --database-name agents \
+  --container-name rl_episodes \
+  --query "SELECT * FROM c WHERE c.agent_id = 'my-agent' ORDER BY c._ts DESC OFFSET 0 LIMIT 5"
+```
+
+### Step 9.3: Label Episodes with Rewards
+
+Label episodes using the CLI tool:
+
+```bash
+# List unlabeled episodes
+python -m lightning.cli list-episodes \
+  --agent-id my-agent \
+  --unlabeled-only
+
+# Review an episode and assign reward
+python -m lightning.cli label-episode \
+  --episode-id episode-xyz789 \
+  --reward 0.9 \
+  --reason "High-quality response"
+
+# Label multiple episodes automatically
+python -m lightning.cli label-batch \
+  --agent-id my-agent \
+  --auto-label \
+  --evaluator task_adherence \
+  --min-score 0.7
+```
+
+### Step 9.4: Build Fine-Tuning Dataset
+
+Create a training dataset from labeled episodes:
+
+```bash
+python -m lightning.cli build-dataset \
+  --agent-id my-agent \
+  --name my-agent-v1 \
+  --min-reward 0.7 \
+  --output-format jsonl
+```
+
+### Step 9.5: Start Fine-Tuning Job
+
+Submit a fine-tuning job to Azure OpenAI:
+
+```bash
+python -m lightning.cli start-training \
+  --agent-id my-agent \
+  --dataset-name my-agent-v1 \
+  --base-model gpt-4o-mini \
+  --training-epochs 3 \
+  --learning-rate-multiplier 0.1
+```
+
+Monitor the job status:
+
+```bash
+python -m lightning.cli get-training-status \
+  --job-id <training-job-id>
+```
+
+### Step 9.6: Deploy Tuned Model
+
+Promote the tuned model to active:
+
+```bash
+python -m lightning.cli promote-model \
+  --agent-id my-agent \
+  --model-name ft:gpt-4o-mini:my-agent:abc123 \
+  --mark-active
+```
+
+Update agent deployment to use the tuned model:
+
+```bash
+kubectl set env deployment/my-agent \
+  -n mcp-agents \
+  USE_TUNED_MODEL=true
+
+kubectl rollout restart deployment/my-agent -n mcp-agents
+```
+
+---
+
+## Part 10: Evaluations
+
+**Duration:** 60 minutes
+
+**Objective:** Run structured evaluations to measure agent quality across intent resolution, tool accuracy, and task adherence.
+
+### Step 10.1: Prepare Evaluation Dataset
+
+Create a JSONL file with test cases:
+
+```bash
+touch evals/my_agent_eval.jsonl
+code evals/my_agent_eval.jsonl
+```
+
+Define test cases in JSONL format:
+
+```json
+{"query": "Test query 1", "expected_intent": "intent_1", "expected_tools": ["tool_name_1"], "context": "additional context"}
+{"query": "Test query 2", "expected_intent": "intent_2", "expected_tools": ["tool_name_1", "tool_name_2"], "context": "additional context"}
+```
+
+### Step 10.2: Run Intent Resolution Evaluation
+
+```bash
+python -m evals.evaluate_intent_resolution \
+  --agent-id my-agent \
+  --eval-data evals/my_agent_eval.jsonl \
+  --output evals/results/intent_resolution.json
+```
+
+### Step 10.3: Run Tool Call Accuracy Evaluation
+
+```bash
+python -m evals.evaluate_tool_accuracy \
+  --agent-id my-agent \
+  --eval-data evals/my_agent_eval.jsonl \
+  --output evals/results/tool_accuracy.json
+```
+
+### Step 10.4: Run Task Adherence Evaluation
+
+```bash
+python -m evals.evaluate_task_adherence \
+  --agent-id my-agent \
+  --eval-data evals/my_agent_eval.jsonl \
+  --output evals/results/task_adherence.json
+```
+
+### Step 10.5: Generate Evaluation Report
+
+```bash
+python -m evals.generate_report \
+  --input evals/results/batch_evaluation.json \
+  --output evals/results/evaluation_report.md
+```
+
+---
+
+## Part 11: Next Steps
 
 ### Congratulations! 🎉
 
@@ -1187,6 +1550,9 @@ You have successfully:
 3. ✅ Containerized your agent with Docker
 4. ✅ Deployed your agent to AKS as a new pod
 5. ✅ Verified your agent is working correctly
+6. ✅ Reviewed enterprise governance mechanisms
+7. ✅ Learned about fine-tuning with Agent Lightning
+8. ✅ Ran evaluations to measure agent quality
 
 ### Next Steps to Consider
 
@@ -1230,14 +1596,106 @@ You have successfully:
 | Health check failing | Ensure `/health` endpoint returns 200 |
 | Workload identity issues | Verify service account annotations |
 
-### Resources
+---
 
-- [Azure Agents Control Plane Architecture](AGENTS_ARCHITECTURE.md)
-- [Agent Identity Design](AGENTS_IDENTITY_DESIGN.md)
-- [Agent Lightning Documentation](AGENTS_AGENT_LIGHTNING_DESIGN.md)
-- [Evaluation Framework](AGENTS_EVALUATIONS.md)
+## Optional Extensions
+
+### Extension 1: Cross-Cloud Agent Execution
+
+**Objective:** Deploy an agent to AWS Lambda and maintain Azure governance.
+
+**Steps:**
+
+1. Package your agent as an AWS Lambda function
+2. Deploy to AWS using AWS CDK or Terraform
+3. Configure the Lambda to call Azure APIM for tool execution
+4. Use Azure Managed Identity via OIDC federation for authentication
+5. Validate that telemetry flows to Azure Application Insights
+6. Confirm APIM policies are enforced for Lambda-originated requests
+
+**Key Insight:** Azure controls governance even when agents execute outside Azure.
+
+### Extension 2: Multi-Agent Orchestration
+
+**Objective:** Build a multi-agent system where specialized agents collaborate.
+
+**Steps:**
+
+1. Define specifications for each agent
+2. Implement agents as separate MCP servers
+3. Deploy to AKS with service mesh (Istio or Linkerd)
+4. Configure the orchestrator to route to specialized agents
+5. Test end-to-end orchestration
+6. Review distributed traces showing multi-agent coordination
+
+### Extension 3: Advanced Human-in-the-Loop with Agent 365
+
+**Objective:** Implement human approval for high-value decisions.
+
+**Steps:**
+
+1. Register your agent in the Entra Agent Registry
+2. Configure Agent 365 approval workflows
+3. Integrate with Microsoft Teams for approval cards
+4. Trigger approval requests when needed
+5. Track approval decisions in Cosmos DB
+6. Review audit trail for compliance
+
+### Extension 4: Real-Time Streaming with SSE
+
+**Objective:** Implement server-sent events for real-time agent responses.
+
+**Steps:**
+
+1. Enhance your agent to support SSE streaming
+2. Stream partial results as they're generated
+3. Test with MCP Inspector in streaming mode
+4. Measure latency improvements (TTFB vs. full response)
+5. Implement cancellation support
+
+### Extension 5: Custom Evaluators
+
+**Objective:** Create domain-specific evaluators for your use case.
+
+**Steps:**
+
+1. Define custom evaluation metrics
+2. Implement custom evaluator using Azure AI Evaluation SDK
+3. Run evaluations on historical episodes
+4. Incorporate scores into Agent Lightning reward labeling
+5. Track custom metrics over time
+
+---
+
+## References
+
+### Azure Documentation
+
+- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/what-is-foundry)
+- [Azure AI Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview)
+- [Azure API Management](https://learn.microsoft.com/azure/api-management/)
+- [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/)
+- [Microsoft Entra ID](https://learn.microsoft.com/entra/identity/)
+- [Microsoft Entra Agent Identity](https://learn.microsoft.com/entra/workload-id/)
+- [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/)
+- [Azure AI Search](https://learn.microsoft.com/azure/search/)
+- [Microsoft Fabric](https://learn.microsoft.com/fabric/)
+- [Azure Monitor & App Insights](https://learn.microsoft.com/azure/azure-monitor/overview)
+
+### Agent Frameworks & Protocols
+
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
 - [SpecKit Methodology](https://speckit.dev)
-- [Model Context Protocol](https://modelcontextprotocol.io)
+- [Agents 365](https://learn.microsoft.com/microsoft-365-copilot/extensibility/)
+- [Azure AI Evaluation SDK](https://learn.microsoft.com/azure/ai-studio/how-to/develop/evaluate-sdk)
+
+### Architecture & Design Docs
+
+- [AGENTS_ARCHITECTURE.md](AGENTS_ARCHITECTURE.md) - System architecture diagrams
+- [AGENTS_IDENTITY_DESIGN.md](AGENTS_IDENTITY_DESIGN.md) - Identity architecture
+- [AGENTS_AGENT_LIGHTNING_DESIGN.md](AGENTS_AGENT_LIGHTNING_DESIGN.md) - Fine-tuning design
+- [AGENTS_EVALUATIONS.md](AGENTS_EVALUATIONS.md) - Evaluation framework
+- [AGENTS_APPROVALS.md](AGENTS_APPROVALS.md) - Agent 365 approvals
 
 ---
 

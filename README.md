@@ -230,10 +230,13 @@ python tests/test_apim_mcp_connection.py --use-az-token
 - [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/)
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/)
 - [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/)
+- [Azure Managed Grafana](https://learn.microsoft.com/azure/managed-grafana/)
 - [Azure Storage](https://learn.microsoft.com/azure/storage/)
+- [Fabric Data Agents](https://learn.microsoft.com/fabric/data-science/concept-data-agent)
 - [Foundry IQ](https://learn.microsoft.com/azure/ai-services/agents/concepts/foundry-iq)
 - [Microsoft Fabric](https://learn.microsoft.com/fabric/)
 - [Microsoft Fabric IQ](https://learn.microsoft.com/fabric/get-started/fabric-iq)
+- [Microsoft Purview](https://learn.microsoft.com/purview/)
 
 ### Identity & Security
 

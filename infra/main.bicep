@@ -822,11 +822,11 @@ module fabricPrivateEndpoint 'app/fabric-PrivateEndpoint.bicep' = if (fabricEnab
 // Role assignments for Fabric Data Agents to access lakehouses, warehouses, pipelines, and semantic models
 // Only deployed when both fabricEnabled and fabricDataAgentsEnabled are true
 
-module fabricDataAgents 'app/fabric-data-agents.bicep' = if (fabricEnabled && fabricDataAgentsEnabled && agentIdentityEnabled) {
+module fabricDataAgents 'app/fabric-data-agents.bicep' = if (fabricEnabled && fabricDataAgentsEnabled) {
   name: 'fabricDataAgents'
   scope: rg
   params: {
-    agentPrincipalId: nextBestActionAgentIdentity!.outputs.agentIdentityPrincipalId
+    agentPrincipalId: agentIdentityEnabled ? nextBestActionAgentIdentity!.outputs.agentIdentityPrincipalId : mcpUserAssignedIdentity.outputs.identityPrincipalId
     fabricCapacityId: fabricCapacity!.outputs.id
     fabricCapacityName: fabricResourceName
     fabricWorkspaceId: fabricWorkspaceId
