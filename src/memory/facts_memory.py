@@ -762,6 +762,192 @@ class FactsMemory(MemoryProvider):
         return derived_facts
     
     # =========================================================================
+    # Fabric Lakehouse Integration
+    # =========================================================================
+    
+    async def load_entities_from_lakehouse(
+        self,
+        lakehouse_id: str,
+        table_name: str,
+        entity_type: EntityType,
+        id_column: str = "id",
+        property_columns: Optional[List[str]] = None,
+    ) -> int:
+        """
+        Load entities from a Fabric Lakehouse table.
+        
+        This method queries a Fabric Lakehouse table and creates ontology entities
+        from the results. Useful for pulling real-time data from Fabric into facts memory.
+        
+        Args:
+            lakehouse_id: ID of the Fabric lakehouse
+            table_name: Name of the table to query
+            entity_type: Type of entities to create
+            id_column: Column name to use as entity ID (default: "id")
+            property_columns: Specific columns to include (default: all columns)
+        
+        Returns:
+            Number of entities loaded
+        """
+        if not self._fabric_enabled:
+            logger.warning("Fabric is not enabled, cannot load from lakehouse")
+            return 0
+        
+        try:
+            # Import fabric_tools dynamically to avoid circular dependency
+            from fabric_tools import get_fabric_client
+            
+            client = get_fabric_client()
+            
+            # Build Spark SQL query
+            columns = "*" if not property_columns else ", ".join(property_columns)
+            query = f"SELECT {columns} FROM {table_name}"
+            
+            result = client.query_lakehouse(lakehouse_id, query, table_name)
+            
+            if not result.get("results"):
+                logger.warning(f"No results from lakehouse table {table_name}")
+                return 0
+            
+            # Parse results and create entities
+            count = 0
+            rows = result.get("results", {}).get("rows", [])
+            
+            for row in rows:
+                try:
+                    entity_id = str(row.get(id_column, f"lakehouse-{count}"))
+                    
+                    # Extract properties (exclude id_column)
+                    properties = {k: v for k, v in row.items() if k != id_column}
+                    
+                    entity = OntologyEntity(
+                        id=entity_id,
+                        entity_type=entity_type,
+                        properties=properties,
+                        metadata={
+                            "source": "fabric_lakehouse",
+                            "lakehouse_id": lakehouse_id,
+                            "table_name": table_name,
+                        }
+                    )
+                    
+                    await self.store_entity(entity)
+                    count += 1
+                
+                except Exception as e:
+                    logger.warning(f"Failed to create entity from row: {e}")
+            
+            logger.info(f"Loaded {count} entities from Fabric lakehouse table {table_name}")
+            return count
+        
+        except Exception as e:
+            logger.error(f"Error loading entities from lakehouse: {e}")
+            return 0
+    
+    async def sync_facts_from_warehouse(
+        self,
+        warehouse_id: str,
+        fact_table: str,
+        domain: str,
+        statement_column: str = "statement",
+        confidence_column: str = "confidence",
+    ) -> int:
+        """
+        Synchronize facts from a Fabric Data Warehouse table.
+        
+        This method queries a Fabric Warehouse table containing facts and loads them
+        into facts memory. Useful for maintaining facts in a centralized warehouse.
+        
+        Args:
+            warehouse_id: ID of the Fabric warehouse
+            fact_table: Name of the facts table
+            domain: Domain for the facts (customer, devops, user_management)
+            statement_column: Column containing fact statements
+            confidence_column: Column containing confidence scores
+        
+        Returns:
+            Number of facts loaded
+        """
+        if not self._fabric_enabled:
+            logger.warning("Fabric is not enabled, cannot sync from warehouse")
+            return 0
+        
+        try:
+            # Import fabric_tools dynamically to avoid circular dependency
+            from fabric_tools import get_fabric_client
+            
+            client = get_fabric_client()
+            
+            # Query facts from warehouse
+            query = f"SELECT * FROM {fact_table}"
+            result = client.query_warehouse(warehouse_id, query, fact_table)
+            
+            if not result.get("results"):
+                logger.warning(f"No results from warehouse table {fact_table}")
+                return 0
+            
+            # Parse results and create facts
+            count = 0
+            rows = result.get("results", {}).get("rows", [])
+            
+            for row in rows:
+                try:
+                    fact_id = row.get("id", f"warehouse-fact-{count}")
+                    statement = row.get(statement_column, "")
+                    confidence = float(row.get(confidence_column, 0.8))
+                    
+                    if not statement:
+                        continue
+                    
+                    fact = Fact(
+                        id=fact_id,
+                        fact_type=row.get("fact_type", "derived"),
+                        domain=domain,
+                        statement=statement,
+                        confidence=confidence,
+                        evidence=row.get("evidence", []),
+                        source="fabric_warehouse",
+                        context={
+                            "warehouse_id": warehouse_id,
+                            "table": fact_table,
+                            **{k: v for k, v in row.items() if k not in [statement_column, confidence_column, "id"]}
+                        }
+                    )
+                    
+                    await self.store_fact(fact)
+                    count += 1
+                
+                except Exception as e:
+                    logger.warning(f"Failed to create fact from row: {e}")
+            
+            logger.info(f"Loaded {count} facts from Fabric warehouse table {fact_table}")
+            return count
+        
+        except Exception as e:
+            logger.error(f"Error syncing facts from warehouse: {e}")
+            return 0
+    
+    def get_fabric_sync_status(self) -> Dict[str, Any]:
+        """
+        Get status of Fabric data synchronization.
+        
+        Returns:
+            Dictionary with sync status information
+        """
+        return {
+            "fabric_enabled": self._fabric_enabled,
+            "fabric_endpoint": self._fabric_endpoint,
+            "workspace_id": self._workspace_id,
+            "total_entities": len(self._entities),
+            "total_facts": len(self._facts),
+            "entities_by_domain": {
+                domain: len(entity_ids)
+                for domain, entity_ids in self._entities_by_domain.items()
+            },
+            "loaded_ontologies": self._loaded_ontologies,
+        }
+    
+    # =========================================================================
     # Cross-Domain Reasoning
     # =========================================================================
     

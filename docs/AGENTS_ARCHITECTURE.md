@@ -13,6 +13,8 @@ This document provides comprehensive Mermaid diagrams for the AI Agents with AKS
    - [Cross-Domain Reasoning](#cross-domain-reasoning)
    - [Memory Flow](#memory-flow)
 4. [Deployment Architecture](#deployment-architecture)
+   - [Fabric Infrastructure Details](#fabric-infrastructure-details)
+   - [Fabric Data Agents](#fabric-data-agents)
 5. [Sequence Diagrams](#sequence-diagrams)
    - [Agent Authentication Flow](#agent-authentication-flow)
    - [MCP Tool Discovery](#mcp-tool-discovery)
@@ -660,6 +662,331 @@ The Microsoft Fabric integration provides ontology-grounded facts for AI agents:
 | OneLake DFS | Data File System API for ontologies | `privatelink.dfs.fabric.microsoft.com` |
 | OneLake Blob | Blob API for file access | `privatelink.blob.fabric.microsoft.com` |
 | Fabric API | REST API access | `privatelink.api.fabric.microsoft.com` |
+
+### Fabric Data Agents
+
+The Azure Agents Control Plane extends Fabric integration beyond Fabric IQ ontologies to include dedicated **Fabric Data Agents** that enable enterprise AI agents to interact directly with Microsoft Fabric's full data platform capabilities.
+
+#### Agent Types
+
+Four specialized Fabric Data Agents provide comprehensive data platform access:
+
+| Agent Type | Purpose | MCP Tools | Query Language |
+|------------|---------|-----------|----------------|
+| **Lakehouse Agent** | Query/write to Fabric Lakehouses | `fabric_query_lakehouse` | Spark SQL |
+| **Warehouse Agent** | Execute queries on Data Warehouses | `fabric_query_warehouse` | T-SQL |
+| **Pipeline Agent** | Trigger and monitor data pipelines | `fabric_trigger_pipeline`, `fabric_get_pipeline_status` | N/A (REST API) |
+| **Semantic Model Agent** | Query Power BI semantic models | `fabric_query_semantic_model` | DAX/MDX |
+
+#### Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "AI Agent Client"
+        Agent[AI Agent<br/>Claude/ChatGPT]
+    end
+    
+    subgraph "Azure API Management"
+        APIM[MCP Gateway<br/>OAuth + Routing]
+    end
+    
+    subgraph "AKS - MCP Server"
+        MCP[MCP Server]
+        FabricTools[Fabric Tools Module]
+        FactsMem[Facts Memory<br/>+ Lakehouse Sync]
+    end
+    
+    subgraph "Microsoft Fabric"
+        subgraph "Fabric Workspace"
+            Lakehouse[Lakehouse<br/>Spark SQL]
+            Warehouse[Data Warehouse<br/>T-SQL]
+            Pipeline[Data Pipeline<br/>ETL/ELT]
+            SemanticModel[Semantic Model<br/>DAX/MDX]
+        end
+        OneLake[OneLake Storage]
+        FabricAPI[Fabric REST API]
+    end
+    
+    Agent -->|OAuth + MCP Protocol| APIM
+    APIM --> MCP
+    MCP --> FabricTools
+    FabricTools -->|Query/Trigger| FabricAPI
+    FabricTools -->|Workload Identity| FabricAPI
+    FabricAPI --> Lakehouse
+    FabricAPI --> Warehouse
+    FabricAPI --> Pipeline
+    FabricAPI --> SemanticModel
+    MCP --> FactsMem
+    FactsMem -->|Load Entities| Lakehouse
+    FactsMem -->|Sync Facts| Warehouse
+    Lakehouse --> OneLake
+    Warehouse --> OneLake
+    
+    style Agent fill:#e1f5ff
+    style APIM fill:#fff4e6
+    style MCP fill:#e8f5e9
+    style FabricTools fill:#e8f5e9
+    style FactsMem fill:#e8f5e9
+    style Lakehouse fill:#ffb900,color:#000
+    style Warehouse fill:#ffb900,color:#000
+    style Pipeline fill:#ffb900,color:#000
+    style SemanticModel fill:#ffb900,color:#000
+```
+
+#### MCP Tools Reference
+
+##### `fabric_query_lakehouse`
+
+Execute Spark SQL queries against Fabric Lakehouses for big data analytics.
+
+```json
+{
+  "tool": "fabric_query_lakehouse",
+  "arguments": {
+    "lakehouse_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+    "query": "SELECT customer_id, churn_risk FROM customers WHERE churn_risk > 0.7",
+    "lakehouse_name": "customer-analytics"
+  }
+}
+```
+
+**Use Cases:**
+- Query large-scale customer data for churn analysis
+- Extract pipeline telemetry for DevOps insights
+- Analyze user behavior patterns across domains
+
+##### `fabric_query_warehouse`
+
+Execute T-SQL queries against Fabric Data Warehouses for structured analytics.
+
+```json
+{
+  "tool": "fabric_query_warehouse",
+  "arguments": {
+    "warehouse_id": "wxyz9876-5432-10ab-cdef-ghijklmnopqr",
+    "query": "SELECT TOP 10 * FROM sales_summary ORDER BY revenue DESC",
+    "warehouse_name": "enterprise-dwh"
+  }
+}
+```
+
+**Use Cases:**
+- Query aggregated sales data
+- Retrieve deployment statistics
+- Access role-based access control (RBAC) data
+
+##### `fabric_trigger_pipeline`
+
+Trigger Fabric Data Pipeline execution for ETL/ELT operations.
+
+```json
+{
+  "tool": "fabric_trigger_pipeline",
+  "arguments": {
+    "pipeline_id": "pipe1234-5678-90ab-cdef-ghijklmnopqr",
+    "pipeline_name": "customer-churn-etl",
+    "parameters": "{\"run_date\": \"2026-02-07\", \"full_refresh\": false}"
+  }
+}
+```
+
+**Use Cases:**
+- Refresh customer churn predictions
+- Trigger CI/CD deployment pipeline analysis
+- Schedule user access audits
+
+##### `fabric_get_pipeline_status`
+
+Monitor Fabric Data Pipeline execution status.
+
+```json
+{
+  "tool": "fabric_get_pipeline_status",
+  "arguments": {
+    "pipeline_id": "pipe1234-5678-90ab-cdef-ghijklmnopqr",
+    "run_id": "run5678-90ab-cdef-1234-567890abcdef",
+    "pipeline_name": "customer-churn-etl"
+  }
+}
+```
+
+**Returns:** Pipeline status (NotStarted, InProgress, Succeeded, Failed, Cancelled)
+
+##### `fabric_query_semantic_model`
+
+Query Power BI semantic models using DAX or MDX for analytics.
+
+```json
+{
+  "tool": "fabric_query_semantic_model",
+  "arguments": {
+    "dataset_id": "sem1234-5678-90ab-cdef-ghijklmnopqr",
+    "query": "EVALUATE TOPN(10, Customer, [ChurnRisk], DESC)",
+    "dataset_name": "customer-360",
+    "query_language": "DAX"
+  }
+}
+```
+
+**Use Cases:**
+- Query pre-built customer 360 models
+- Access DevOps KPI dashboards
+- Retrieve user access analytics
+
+##### `fabric_list_resources`
+
+Discover available Fabric resources in the workspace.
+
+```json
+{
+  "tool": "fabric_list_resources",
+  "arguments": {
+    "resource_type": "all"
+  }
+}
+```
+
+**Resource Types:** `lakehouse`, `warehouse`, `pipeline`, `semantic_model`, `all`
+
+#### Memory Integration
+
+Fabric Data Agents extend the Facts Memory provider to pull entity data directly from Fabric:
+
+**Load Entities from Lakehouse:**
+```python
+# Synchronize customer entities from Fabric Lakehouse
+count = await facts_memory.load_entities_from_lakehouse(
+    lakehouse_id="lakehouse-id",
+    table_name="customers",
+    entity_type=EntityType.CUSTOMER,
+    id_column="customer_id"
+)
+```
+
+**Sync Facts from Warehouse:**
+```python
+# Synchronize derived facts from Fabric Warehouse
+count = await facts_memory.sync_facts_from_warehouse(
+    warehouse_id="warehouse-id",
+    fact_table="customer_insights",
+    domain="customer"
+)
+```
+
+This enables:
+- Real-time entity data from Fabric lakehouses
+- Cached frequently accessed data in short-term memory
+- Indexed Fabric metadata in long-term memory for discovery
+
+#### Security Model
+
+**Workload Identity Authentication:**
+- Uses Azure Entra ID workload identity federation
+- No secrets or connection strings stored in code
+- Authenticates with `DefaultAzureCredential` to Fabric REST API
+
+**RBAC Roles (configured in `infra/app/fabric-data-agents.bicep`):**
+
+| Role | Purpose | Permissions |
+|------|---------|-------------|
+| **Reader** | View workspace resources | Read-only access to lakehouses, warehouses, pipelines |
+| **Contributor** | Manage data operations | Trigger pipelines, execute queries, write to lakehouses |
+| **Storage Blob Data Contributor** | OneLake data access | Read/write data through OneLake DFS/Blob APIs |
+
+**Audit Logging:**
+- All Fabric operations logged to Azure Monitor
+- Query execution tracked with timestamps and user context
+- Pipeline triggers recorded with parameters and outcomes
+
+#### Configuration
+
+**Infrastructure (Bicep):**
+```bicep
+// Enable Fabric Data Agents
+param fabricDataAgentsEnabled bool = true
+param fabricWorkspaceId string = 'workspace-guid'
+
+// Deployed in infra/app/fabric-data-agents.bicep
+module fabricDataAgents 'app/fabric-data-agents.bicep' = {
+  params: {
+    agentPrincipalId: agentIdentity.principalId
+    fabricCapacityId: fabricCapacity.id
+    fabricWorkspaceId: fabricWorkspaceId
+    fabricDataAgentsEnabled: fabricDataAgentsEnabled
+  }
+}
+```
+
+**Environment Variables (K8s):**
+```yaml
+- name: FABRIC_ENABLED
+  value: "true"
+- name: FABRIC_DATA_AGENTS_ENABLED
+  value: "true"
+- name: FABRIC_API_ENDPOINT
+  value: "https://api.fabric.microsoft.com/v1"
+- name: FABRIC_WORKSPACE_ID
+  value: "abcd1234-workspace-guid"
+```
+
+#### Data Flow Example
+
+**Agent Request Flow:**
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant APIM as API Management
+    participant MCP as MCP Server
+    participant Fabric as Fabric API
+    participant Lakehouse as Lakehouse
+    
+    Agent->>APIM: Execute fabric_query_lakehouse<br/>(OAuth token)
+    APIM->>MCP: Forward MCP tool request
+    MCP->>MCP: Get workload identity token
+    MCP->>Fabric: POST /workspaces/{id}/lakehouses/{id}/query<br/>(Bearer token)
+    Fabric->>Lakehouse: Execute Spark SQL
+    Lakehouse-->>Fabric: Query results
+    Fabric-->>MCP: Results + metadata
+    MCP-->>APIM: JSON response
+    APIM-->>Agent: Tool execution result
+    
+    Note over Agent,Lakehouse: All operations audited in Azure Monitor
+```
+
+#### Integration with Existing Components
+
+**Facts Memory (Fabric IQ):**
+- Fabric IQ provides ontology-grounded facts for reasoning
+- Fabric Data Agents enable real-time data queries
+- Both use same workload identity and private endpoints
+
+**Composite Memory Architecture:**
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Composite Memory                        │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐ │
+│  │ Short-Term   │  │ Long-Term    │  │  Facts Memory   │ │
+│  │  (CosmosDB)  │  │ (AI Search)  │  │  (Fabric IQ)    │ │
+│  │              │  │              │  │                 │ │
+│  │ - Episodes   │  │ - Task Inst. │  │ - Ontologies    │ │
+│  │ - Recent     │  │ - Best       │  │ - Domain Facts  │ │
+│  │   Tasks      │  │   Practices  │  │ - Entities      │ │
+│  └──────────────┘  └──────────────┘  └─────────────────┘ │
+│                                             ↕              │
+│                                      ┌─────────────────┐  │
+│                                      │ Fabric Data     │  │
+│                                      │ Agents          │  │
+│                                      │                 │  │
+│                                      │ - Lakehouses    │  │
+│                                      │ - Warehouses    │  │
+│                                      │ - Pipelines     │  │
+│                                      │ - Semantic      │  │
+│                                      │   Models        │  │
+│                                      └─────────────────┘  │
+└────────────────────────────────────────────────────────────┘
+```
 
 ### Private Endpoint Architecture
 
