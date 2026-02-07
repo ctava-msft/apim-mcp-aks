@@ -35,6 +35,12 @@ param enableMonitoring bool = true
 @allowed(['Free', 'Standard'])
 param skuTier string = 'Standard'
 
+@description('Azure Monitor Workspace ID for Prometheus metrics')
+param azureMonitorWorkspaceId string = ''
+
+@description('Enable Prometheus metrics collection')
+param enablePrometheus bool = true
+
 // AKS Cluster with system node pool
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   name: aksClusterName
@@ -96,6 +102,15 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
         enabled: true
       }
     }
+    azureMonitorProfile: enablePrometheus && !empty(azureMonitorWorkspaceId) ? {
+      metrics: {
+        enabled: true
+        kubeStateMetrics: {
+          metricLabelsAllowlist: '*'
+          metricAnnotationsAllowList: '*'
+        }
+      }
+    } : null
   }
 }
 

@@ -11,9 +11,6 @@
     "vnetEnabled": {
       "value": "${VNET_ENABLED=true}"
     },
-    "apimSku": {
-      "value": "Basicv2" 
-    },
     "mcpEntraApplicationDisplayName": {
       "value": "MCP-OAuth-App"
     },

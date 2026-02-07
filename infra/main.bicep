@@ -95,6 +95,15 @@ param teamsGroupId string = ''
 @description('Approval timeout in hours')
 param approvalTimeoutHours int = 2
 
+// =========================================
+// Azure Managed Grafana Configuration
+// =========================================
+@description('Enable Azure Managed Grafana for AKS monitoring dashboards')
+param grafanaEnabled bool = true
+
+@description('Name for the Azure Managed Grafana instance')
+param grafanaName string = ''
+
 // MCP Client APIM gateway specific variables
 
 var oauth_scopes = 'openid https://graph.microsoft.com/.default'
@@ -245,6 +254,23 @@ module containerRegistry './core/acr/container-registry.bicep' = {
   }
 }
 
+// =========================================
+// Azure Monitor Workspace for Prometheus Metrics (deployed before AKS)
+// =========================================
+var azureMonitorWorkspaceName = 'amw-${resourceToken}'
+
+// Azure Monitor Workspace - required for Prometheus metrics collection from AKS
+module azureMonitorWorkspace './core/monitor/azure-monitor-workspace.bicep' = if (grafanaEnabled) {
+  name: 'azureMonitorWorkspace'
+  scope: rg
+  params: {
+    name: azureMonitorWorkspaceName
+    location: location
+    tags: tags
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
 // AKS Cluster
 module aksCluster './core/aks/aks-cluster.bicep' = {
   name: 'aksCluster'
@@ -259,10 +285,15 @@ module aksCluster './core/aks/aks-cluster.bicep' = {
     userAssignedIdentityId: aksUserAssignedIdentity.outputs.identityId
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
     subnetId: vnetEnabled ? '${rg.id}/providers/Microsoft.Network/virtualNetworks/${serviceVirtualNetworkName}/subnets/${serviceVirtualNetworkAppSubnetName}' : ''
+    enablePrometheus: grafanaEnabled
+    azureMonitorWorkspaceId: grafanaEnabled ? azureMonitorWorkspace!.outputs.id : ''
   }
   dependsOn: vnetEnabled ? [
     serviceVirtualNetworkEarly
-  ] : []
+    monitoring
+  ] : [
+    monitoring
+  ]
 }
 
 // Static Public IP for MCP Server LoadBalancer
@@ -752,6 +783,90 @@ module monitoring './core/monitor/monitoring.bicep' = {
 
 var monitoringRoleDefinitionId = '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher role ID
 
+// Prometheus Data Collection Rule Association with AKS
+// This enables Prometheus metrics scraping from the AKS cluster
+module prometheusDcrAssociation './core/monitor/prometheus-dcr-association.bicep' = if (grafanaEnabled) {
+  name: 'prometheusDcrAssociation'
+  scope: rg
+  params: {
+    aksClusterName: aksCluster.outputs.aksClusterName
+    dataCollectionRuleId: azureMonitorWorkspace!.outputs.dataCollectionRuleId
+    dataCollectionEndpointId: azureMonitorWorkspace!.outputs.dataCollectionEndpointId
+  }
+}
+
+// =========================================
+// Azure Managed Grafana for AKS Monitoring
+// =========================================
+var grafanaResourceName = !empty(grafanaName) ? grafanaName : 'amg-${resourceToken}'
+
+// Azure Managed Grafana with Azure Monitor Workspace (Prometheus) integration
+module grafana './core/monitor/grafana.bicep' = if (grafanaEnabled) {
+  name: 'grafana'
+  scope: rg
+  params: {
+    grafanaName: grafanaResourceName
+    location: location
+    tags: tags
+    skuName: 'Standard'
+    publicNetworkAccess: 'Enabled'
+    enableSystemAssignedIdentity: true
+    azureMonitorWorkspaceId: azureMonitorWorkspace!.outputs.id
+  }
+}
+
+// Role assignments for Grafana to access monitoring data
+// Monitoring Reader role on Log Analytics Workspace
+var MonitoringReader = '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
+module grafanaLogAnalyticsRole './app/grafana-RoleAssignment.bicep' = if (grafanaEnabled) {
+  name: 'grafanaLogAnalyticsRole'
+  scope: rg
+  params: {
+    resourceName: monitoring.outputs.logAnalyticsWorkspaceName
+    resourceType: 'logAnalytics'
+    roleDefinitionID: MonitoringReader
+    principalID: grafana!.outputs.principalId
+  }
+}
+
+// Reader role on AKS cluster for Grafana
+var ReaderRole = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
+module grafanaAksRole './app/grafana-RoleAssignment.bicep' = if (grafanaEnabled) {
+  name: 'grafanaAksRole'
+  scope: rg
+  params: {
+    resourceName: aksCluster.outputs.aksClusterName
+    resourceType: 'aks'
+    roleDefinitionID: ReaderRole
+    principalID: grafana!.outputs.principalId
+  }
+}
+
+// Monitoring Reader role on Application Insights
+module grafanaAppInsightsRole './app/grafana-RoleAssignment.bicep' = if (grafanaEnabled) {
+  name: 'grafanaAppInsightsRole'
+  scope: rg
+  params: {
+    resourceName: monitoring.outputs.applicationInsightsName
+    resourceType: 'appInsights'
+    roleDefinitionID: MonitoringReader
+    principalID: grafana!.outputs.principalId
+  }
+}
+
+// Monitoring Data Reader role on Azure Monitor Workspace (for Prometheus)
+var MonitoringDataReader = 'b0d8363b-8ddd-447d-831f-62ca05bff136'
+module grafanaAzureMonitorWorkspaceRole './app/grafana-RoleAssignment.bicep' = if (grafanaEnabled) {
+  name: 'grafanaAzureMonitorWorkspaceRole'
+  scope: rg
+  params: {
+    resourceName: azureMonitorWorkspace!.outputs.name
+    resourceType: 'azureMonitorWorkspace'
+    roleDefinitionID: MonitoringDataReader
+    principalID: grafana!.outputs.principalId
+  }
+}
+
 // Allow access from MCP server workload identity to application insights
 module appInsightsRoleAssignmentMcp './core/monitor/appinsights-access.bicep' = {
   name: 'appInsightsRoleAssignmentMcp'
@@ -879,4 +994,12 @@ output AGENT_IDENTITY_DISPLAY_NAME string = agentIdentityEnabled ? nextBestActio
 output APPROVAL_LOGIC_APP_ENABLED bool = approvalLogicAppEnabled
 output APPROVAL_LOGIC_APP_TRIGGER_URL string = approvalLogicAppEnabled ? agentsApprovalLogicApp!.outputs.logicAppTriggerUrl : ''
 output APPROVAL_LOGIC_APP_NAME string = approvalLogicAppEnabled ? agentsApprovalLogicApp!.outputs.logicAppName : ''
+
+// =========================================
+// Azure Managed Grafana outputs
+// =========================================
+output GRAFANA_ENABLED bool = grafanaEnabled
+output GRAFANA_NAME string = grafanaEnabled ? grafana!.outputs.name : ''
+output GRAFANA_ENDPOINT string = grafanaEnabled ? grafana!.outputs.endpoint : ''
+output GRAFANA_RESOURCE_ID string = grafanaEnabled ? grafana!.outputs.id : ''
 
