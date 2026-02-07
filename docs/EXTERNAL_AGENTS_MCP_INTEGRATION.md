@@ -49,7 +49,7 @@ The architecture separates the **Control Plane** (governance and orchestration) 
                                │ MCP Protocol (JSON-RPC 2.0)
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    AZURE CONTROL PLANE (VISA)                       │
+│                    AZURE CONTROL PLANE                              │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────┐      │
 │  │  Azure API Management (APIM)                            │      │
@@ -255,11 +255,13 @@ from google.auth import default
 from google.auth.transport.requests import Request
 
 # Obtain Azure token via workload identity federation
+# NOTE: Replace 'apim-xyz.azure-api.net' with your actual APIM instance URL
 credentials, project = default(scopes=["https://apim-xyz.azure-api.net/.default"])
 credentials.refresh(Request())
 azure_token = credentials.token
 
 # Connect to Azure MCP endpoint
+# NOTE: Replace with your actual APIM endpoint URL
 async with ClientSession(
     "https://apim-xyz.azure-api.net/mcp/sse",
     headers={"Authorization": f"Bearer {azure_token}"}
@@ -296,13 +298,26 @@ async with ClientSession(
 ```python
 # AWS Lambda connecting to Azure MCP
 import os
+import json
 import boto3
 from mcp import ClientSession
+import requests
 
-# Retrieve Azure credentials from Secrets Manager
+# Retrieve Azure client credentials from Secrets Manager
 secrets = boto3.client('secretsmanager')
-secret = secrets.get_secret_value(SecretId='azure-agent-credentials')
-azure_token = secret['SecretString']  # Pre-fetched OAuth token
+secret_value = secrets.get_secret_value(SecretId='azure-agent-credentials')
+credentials = json.loads(secret_value['SecretString'])
+
+# Obtain OAuth token from Azure Entra ID
+token_url = f"https://login.microsoftonline.com/{credentials['tenant_id']}/oauth2/v2.0/token"
+token_data = {
+    'client_id': credentials['client_id'],
+    'client_secret': credentials['client_secret'],
+    'scope': f"api://{credentials['apim_app_id']}/.default",
+    'grant_type': 'client_credentials'
+}
+token_response = requests.post(token_url, data=token_data)
+azure_token = token_response.json()['access_token']
 
 # Connect to Azure MCP endpoint
 async with ClientSession(
@@ -638,6 +653,7 @@ from google.oauth2 import service_account
 from mcp import ClientSession
 
 # Use GCP service account to obtain Azure token
+# NOTE: Replace 'apim-xyz.azure-api.net' and 'vertex-agent@project.iam.gserviceaccount.com' with your values
 credentials, project = default()
 target_credentials = impersonated_credentials.Credentials(
     source_credentials=credentials,
@@ -649,6 +665,7 @@ target_credentials = impersonated_credentials.Credentials(
 azure_token = target_credentials.token
 
 # Connect to Azure MCP
+# NOTE: Replace with your actual APIM endpoint URL
 async with ClientSession(
     "https://apim-xyz.azure-api.net/mcp/sse",
     headers={"Authorization": f"Bearer {azure_token}"}
@@ -702,16 +719,21 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 import requests
 
-# Retrieve Azure token via IAM role federation
-sts = boto3.client('sts')
-token_response = sts.assume_role_with_web_identity(
-    RoleArn=os.environ['AWS_ROLE_ARN'],
-    RoleSessionName='ecs-agent-session',
-    WebIdentityToken=os.environ['AWS_WEB_IDENTITY_TOKEN']
-)
+# Retrieve Azure credentials from environment (injected via task definition)
+# These should be federated credentials obtained via IAM role with OIDC to Azure
+import requests
 
-# Use token to authenticate with Azure
-azure_token = token_response['Credentials']['AccessKeyId']  # Simplified
+# Obtain Azure token via federated credentials
+# In production, use proper OIDC federation between AWS IAM and Azure Entra ID
+token_url = f"https://login.microsoftonline.com/{os.environ['AZURE_TENANT_ID']}/oauth2/v2.0/token"
+token_data = {
+    'client_id': os.environ['AZURE_CLIENT_ID'],
+    'client_secret': os.environ['AZURE_CLIENT_SECRET'],  # Retrieved from AWS Secrets Manager
+    'scope': f"api://{os.environ['AZURE_APIM_APP_ID']}/.default",
+    'grant_type': 'client_credentials'
+}
+token_response = requests.post(token_url, data=token_data)
+azure_token = token_response.json()['access_token']
 
 # Connect to Azure MCP
 async with ClientSession(
@@ -848,9 +870,14 @@ def run_agent_job():
             if time.time() > token_expiry - 300:  # 5 min buffer
                 token, expires_in = get_azure_token()
                 token_expiry = time.time() + expires_in
-                # Reconnect with new token
+                # Properly close and recreate session with new token
                 await session.close()
-                session = ClientSession(..., headers={"Authorization": f"Bearer {token}"})
+                async with ClientSession(
+                    "https://apim-xyz.azure-api.net/mcp/sse",
+                    headers={"Authorization": f"Bearer {token}"}
+                ) as session:
+                    # Continue processing in new session context
+                    pass
             
             # Invoke MCP tool
             result = await session.call_tool("analyze_data", {...})
@@ -1003,12 +1030,13 @@ End
 
 **APIM Policies**:
 ```xml
+<!-- Extract agent identity from JWT token for rate limiting -->
 <rate-limit-by-key calls="100" renewal-period="60" 
-    counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization"))" />
+    counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Subject ?? "anonymous")" />
 ```
 
 **Strategies**:
-- **Per-Agent Identity**: Limit based on OAuth token subject (agent ID)
+- **Per-Agent Identity**: Limit based on OAuth token subject (agent ID) extracted from JWT
 - **Per-Tenant**: Limit based on tenant ID claim in token
 - **Per-Tool**: Different rate limits for different MCP tools (expensive vs. cheap operations)
 
