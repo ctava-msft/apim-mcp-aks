@@ -176,6 +176,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 | [AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md](docs/AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md) | Lightning test results                           |
 | [AGENTS_EVALUATIONS.md](docs/AGENTS_EVALUATIONS.md)                                   | Agent evaluation framework                       |
 | [AGENTS_TEST_RESULTS.md](docs/AGENTS_TEST_RESULTS.md)                                 | Integration test results                         |
+| [DEFENDER_FOR_CLOUD_TESTING.md](docs/DEFENDER_FOR_CLOUD_TESTING.md)                   | Defender for Cloud deployment and testing guide  |
 
 ---
 
