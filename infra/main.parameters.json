@@ -38,6 +38,12 @@
     "developerIpAddress": {
       "value": "${DEVELOPER_IP_ADDRESS=}"
     },
+    "fabricDataAgentsEnabled": {
+      "value": "${FABRIC_DATA_AGENTS_ENABLED=true}"
+    },
+    "fabricWorkspaceId": {
+      "value": "${FABRIC_WORKSPACE_ID=}"
+    },
     "defenderEnabled": {
       "value": "${DEFENDER_ENABLED=true}"
     },
