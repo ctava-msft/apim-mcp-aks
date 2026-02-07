@@ -6,7 +6,7 @@ This guide provides a practical, step-by-step approach for connecting external a
 
 ### Purpose of the Azure Agents Control Plane
 
-The Azure Agents Control Plane provides **centralized governance, observability, identity, and compliance** for enterprise AI agents—regardless of where they execute. Azure acts as the system of record for:
+The Azure Agents Control Plane provides **centralized governance, observability, identity, and compliance** for enterprise AI agents — regardless of where they execute. Azure acts as the system of record for:
 
 - **API Governance** - All agent tool calls flow through Azure API Management (APIM) with consistent policies, rate limits, and routing
 - **Identity & Access** - Every agent receives a Microsoft Entra ID identity with role-based access control (RBAC)
@@ -359,14 +359,13 @@ async with ClientSession(
 **Minimal Example:**
 ```python
 # Databricks Notebook connecting to Azure MCP
-# NOTE: This example uses Databricks-specific modules (dbutils) available only in Databricks environments
 %pip install mcp-client msal
 
 from mcp import ClientSession
 from msal import ConfidentialClientApplication
-# dbutils is automatically available in Databricks notebooks and jobs
+# NOTE: dbutils is Databricks-specific and automatically available in notebooks/jobs
 
-# Retrieve credentials from Databricks secrets
+# Retrieve credentials from Databricks secrets using dbutils
 client_id = dbutils.secrets.get(scope="azure-creds", key="client-id")
 client_secret = dbutils.secrets.get(scope="azure-creds", key="client-secret")
 tenant_id = dbutils.secrets.get(scope="azure-creds", key="tenant-id")
@@ -726,7 +725,7 @@ import requests
 # See AWS documentation: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html
 # 
 # For a complete example of retrieving secrets directly from Secrets Manager at runtime,
-# see the AWS Lambda example (lines 306-327) which demonstrates the proper SDK pattern.
+# see the AWS Lambda example which demonstrates the proper SDK pattern (get_azure_token function).
 import requests
 
 # Obtain Azure token via federated credentials
@@ -898,32 +897,45 @@ def process_result(result):
     # Add your processing logic here
 
 async def run_agent_job():
-    """Long-running agent job with token refresh"""
+    """Long-running agent job with token refresh
+    
+    NOTE: This is a simplified example. Production implementations should include:
+    - Proper termination logic (e.g., checking for shutdown signal)
+    - Error handling with retries for transient failures
+    - Graceful shutdown on exceptions
+    - Health check reporting
+    """
     # Long-running job loop with token refresh
-    while True:
-        # Get fresh token
-        token, expires_in = get_azure_token()
-        token_expiry = time.time() + expires_in
+    while True:  # In production, add termination condition
+        try:
+            # Get fresh token
+            token, expires_in = get_azure_token()
+            token_expiry = time.time() + expires_in
+            
+            # Create session with current token
+            async with ClientSession(
+                "https://apim-xyz.azure-api.net/mcp/sse",
+                headers={"Authorization": f"Bearer {token}"}
+            ) as session:
+                
+                # Use session until token needs refresh
+                while time.time() < token_expiry - 300:  # 5 min buffer
+                    # Invoke MCP tool (replace {...} with actual parameters)
+                    result = await session.call_tool("analyze_data", {"param": "value"})
+                    
+                    # Process result
+                    process_result(result)
+                    
+                    # Wait before next iteration
+                    await asyncio.sleep(60)
+                
+                # Token is about to expire, loop will exit and recreate session
+                # with new token on next outer loop iteration
         
-        # Create session with current token
-        async with ClientSession(
-            "https://apim-xyz.azure-api.net/mcp/sse",
-            headers={"Authorization": f"Bearer {token}"}
-        ) as session:
-            
-            # Use session until token needs refresh
-            while time.time() < token_expiry - 300:  # 5 min buffer
-                # Invoke MCP tool (replace {...} with actual parameters)
-                result = await session.call_tool("analyze_data", {"param": "value"})
-                
-                # Process result
-                process_result(result)
-                
-                # Wait before next iteration
-                await asyncio.sleep(60)
-            
-            # Token is about to expire, loop will exit and recreate session
-            # with new token on next outer loop iteration
+        except Exception as e:
+            # In production, implement proper error handling and retry logic
+            print(f"Error in agent job: {e}")
+            await asyncio.sleep(60)  # Wait before retry
 
 # Run the agent job
 asyncio.run(run_agent_job())
