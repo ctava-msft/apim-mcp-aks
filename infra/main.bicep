@@ -1065,7 +1065,7 @@ module purviewAgentRole './app/purview-RoleAssignment.bicep' = if (purviewEnable
   }
 }
 
-// Assign Purview Data Source Administrator role to Purview's managed identity for scanning
+// Grant Purview managed identity access to scan Cosmos DB data sources
 module purviewScanCosmosRole './app/cosmos-RoleAssignment.bicep' = if (purviewEnabled) {
   name: 'purviewScanCosmosRole'
   scope: rg
