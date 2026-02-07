@@ -104,6 +104,36 @@ param grafanaEnabled bool = true
 @description('Name for the Azure Managed Grafana instance')
 param grafanaName string = ''
 
+// =========================================
+// Microsoft Defender for Cloud Configuration
+// =========================================
+@description('Enable Microsoft Defender for Cloud')
+param defenderEnabled bool = true
+
+@description('Email address for Defender security contact notifications')
+param defenderSecurityContactEmail string = ''
+
+@description('Phone number for Defender security contact notifications')
+param defenderSecurityContactPhone string = ''
+
+@description('Enable Defender for Containers')
+param defenderForContainersEnabled bool = true
+
+@description('Enable Defender for Key Vault')
+param defenderForKeyVaultEnabled bool = true
+
+@description('Enable Defender for Azure Cosmos DB')
+param defenderForCosmosDBEnabled bool = true
+
+@description('Enable Defender for APIs (API Management)')
+param defenderForAPIsEnabled bool = true
+
+@description('Enable Defender for Resource Manager')
+param defenderForResourceManagerEnabled bool = true
+
+@description('Enable Defender for Container Registries')
+param defenderForContainerRegistryEnabled bool = true
+
 // MCP Client APIM gateway specific variables
 
 var oauth_scopes = 'openid https://graph.microsoft.com/.default'
@@ -928,6 +958,24 @@ module agentsApprovalLogicApp './app/agents-approval-logicapp.bicep' = if (appro
   }
 }
 
+// =========================================
+// Microsoft Defender for Cloud
+// =========================================
+// Deploy Defender for Cloud plans for threat protection and security monitoring
+module defender './core/security/defender.bicep' = if (defenderEnabled && !empty(defenderSecurityContactEmail)) {
+  name: 'defender'
+  params: {
+    securityContactEmail: defenderSecurityContactEmail
+    securityContactPhone: defenderSecurityContactPhone
+    enableDefenderForContainers: defenderForContainersEnabled
+    enableDefenderForKeyVault: defenderForKeyVaultEnabled
+    enableDefenderForCosmosDB: defenderForCosmosDBEnabled
+    enableDefenderForAPIs: defenderForAPIsEnabled
+    enableDefenderForResourceManager: defenderForResourceManagerEnabled
+    enableDefenderForContainerRegistry: defenderForContainerRegistryEnabled
+  }
+}
+
 
 // App outputs
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
@@ -1002,4 +1050,16 @@ output GRAFANA_ENABLED bool = grafanaEnabled
 output GRAFANA_NAME string = grafanaEnabled ? grafana!.outputs.name : ''
 output GRAFANA_ENDPOINT string = grafanaEnabled ? grafana!.outputs.endpoint : ''
 output GRAFANA_RESOURCE_ID string = grafanaEnabled ? grafana!.outputs.id : ''
+
+// =========================================
+// Microsoft Defender for Cloud outputs
+// =========================================
+output DEFENDER_ENABLED bool = defenderEnabled
+output DEFENDER_DEPLOYED bool = defenderEnabled && !empty(defenderSecurityContactEmail)
+output DEFENDER_FOR_CONTAINERS_ENABLED bool = defenderForContainersEnabled
+output DEFENDER_FOR_KEY_VAULT_ENABLED bool = defenderForKeyVaultEnabled
+output DEFENDER_FOR_COSMOS_DB_ENABLED bool = defenderForCosmosDBEnabled
+output DEFENDER_FOR_APIS_ENABLED bool = defenderForAPIsEnabled
+output DEFENDER_FOR_RESOURCE_MANAGER_ENABLED bool = defenderForResourceManagerEnabled
+
 

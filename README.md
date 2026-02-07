@@ -111,6 +111,44 @@ azd provision --no-prompt
 
 ---
 
+## Security Configuration
+
+### Microsoft Defender for Cloud
+
+The infrastructure includes optional Microsoft Defender for Cloud integration to provide continuous security assessment, threat protection, and compliance monitoring for Azure resources.
+
+**Defender Plans Included:**
+- **Defender for Containers** - Protects AKS clusters and container registries with vulnerability assessments
+- **Defender for Key Vault** - Detects unusual access patterns to secrets
+- **Defender for Azure Cosmos DB** - Monitors database threats and anomalies
+- **Defender for APIs** - Secures API Management endpoints
+- **Defender for Resource Manager** - Monitors control plane operations
+
+**Configuration:**
+
+To enable Defender for Cloud, set the following environment variables before deployment:
+
+```bash
+# Enable Defender for Cloud
+azd env set DEFENDER_ENABLED true
+
+# Set security contact for alert notifications (required)
+azd env set DEFENDER_SECURITY_CONTACT_EMAIL "security@example.com"
+
+# Optional: Set security contact phone number
+azd env set DEFENDER_SECURITY_CONTACT_PHONE "+1-555-0100"
+```
+
+The Defender module will automatically:
+- Enable selected Defender plans at the subscription level
+- Configure security contact for alert notifications
+- Enable auto-provisioning of monitoring agents
+- Send alerts for medium and higher severity issues
+
+**Note:** Defender for Cloud incurs additional costs. Review [Microsoft Defender for Cloud pricing](https://azure.microsoft.com/pricing/details/defender-for-cloud/) before enabling.
+
+---
+
 ## Verification
 
 ```bash
@@ -138,6 +176,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 | [AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md](docs/AGENTS_AGENT_LIGHTNING_TEST_RESULTS.md) | Lightning test results                           |
 | [AGENTS_EVALUATIONS.md](docs/AGENTS_EVALUATIONS.md)                                   | Agent evaluation framework                       |
 | [AGENTS_TEST_RESULTS.md](docs/AGENTS_TEST_RESULTS.md)                                 | Integration test results                         |
+| [DEFENDER_FOR_CLOUD_TESTING.md](docs/DEFENDER_FOR_CLOUD_TESTING.md)                   | Defender for Cloud deployment and testing guide  |
 
 ---
 
@@ -164,6 +203,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 - [Microsoft Entra ID](https://learn.microsoft.com/entra/identity/)
 - [Microsoft Entra Agent Identity](https://learn.microsoft.com/entra/workload-id/)
 - [Workload Identity Federation](https://learn.microsoft.com/azure/aks/workload-identity-overview)
+- [Microsoft Defender for Cloud](https://learn.microsoft.com/azure/defender-for-cloud/)
 
 ### Agent Frameworks & Tools
 

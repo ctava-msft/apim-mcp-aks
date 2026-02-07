@@ -37,6 +37,15 @@
     },
     "developerIpAddress": {
       "value": "${DEVELOPER_IP_ADDRESS=}"
+    },
+    "defenderEnabled": {
+      "value": "${DEFENDER_ENABLED=true}"
+    },
+    "defenderSecurityContactEmail": {
+      "value": "${DEFENDER_SECURITY_CONTACT_EMAIL=}"
+    },
+    "defenderSecurityContactPhone": {
+      "value": "${DEFENDER_SECURITY_CONTACT_PHONE=}"
     }
   }
 }
