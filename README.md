@@ -177,7 +177,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 | [AGENTS_EVALUATIONS.md](docs/AGENTS_EVALUATIONS.md)                                   | Agent evaluation framework                       |
 | [AGENTS_TEST_RESULTS.md](docs/AGENTS_TEST_RESULTS.md)                                 | Integration test results                         |
 | [DEFENDER_FOR_CLOUD_TESTING.md](docs/DEFENDER_FOR_CLOUD_TESTING.md)                   | Defender for Cloud deployment and testing guide  |
-| [SECURITY_REVIEW_PRIVATE_NETWORKING.md](docs/SECURITY_REVIEW_PRIVATE_NETWORKING.md)   | Security review: private networking and identity |
+| [SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)                                         | Security review: private networking and identity |
 
 ---
 
