@@ -719,8 +719,9 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 import requests
 
-# Retrieve Azure credentials from environment (injected via task definition)
-# These should be federated credentials obtained via IAM role with OIDC to Azure
+# Retrieve Azure credentials from environment variables
+# NOTE: Environment variables are populated by ECS task definition from AWS Secrets Manager
+# See AWS documentation on ECS secrets management: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html
 import requests
 
 # Obtain Azure token via federated credentials
@@ -728,7 +729,7 @@ import requests
 token_url = f"https://login.microsoftonline.com/{os.environ['AZURE_TENANT_ID']}/oauth2/v2.0/token"
 token_data = {
     'client_id': os.environ['AZURE_CLIENT_ID'],
-    'client_secret': os.environ['AZURE_CLIENT_SECRET'],  # Retrieved from AWS Secrets Manager
+    'client_secret': os.environ['AZURE_CLIENT_SECRET'],  # Injected from ECS task definition secret
     'scope': f"api://{os.environ['AZURE_APIM_APP_ID']}/.default",
     'grant_type': 'client_credentials'
 }
@@ -856,37 +857,31 @@ def get_azure_token():
     return result['access_token'], result['expires_in']
 
 def run_agent_job():
-    token, expires_in = get_azure_token()
-    token_expiry = time.time() + expires_in
-    
-    async with ClientSession(
-        "https://apim-xyz.azure-api.net/mcp/sse",
-        headers={"Authorization": f"Bearer {token}"}
-    ) as session:
+    # Long-running job loop with token refresh
+    while True:
+        # Get fresh token
+        token, expires_in = get_azure_token()
+        token_expiry = time.time() + expires_in
         
-        # Long-running job loop
-        while True:
-            # Refresh token if needed
-            if time.time() > token_expiry - 300:  # 5 min buffer
-                token, expires_in = get_azure_token()
-                token_expiry = time.time() + expires_in
-                # Properly close and recreate session with new token
-                await session.close()
-                async with ClientSession(
-                    "https://apim-xyz.azure-api.net/mcp/sse",
-                    headers={"Authorization": f"Bearer {token}"}
-                ) as session:
-                    # Continue processing in new session context
-                    pass
+        # Create session with current token
+        async with ClientSession(
+            "https://apim-xyz.azure-api.net/mcp/sse",
+            headers={"Authorization": f"Bearer {token}"}
+        ) as session:
             
-            # Invoke MCP tool
-            result = await session.call_tool("analyze_data", {...})
+            # Use session until token needs refresh
+            while time.time() < token_expiry - 300:  # 5 min buffer
+                # Invoke MCP tool
+                result = await session.call_tool("analyze_data", {...})
+                
+                # Process result
+                process_result(result)
+                
+                # Wait before next iteration
+                time.sleep(60)
             
-            # Process result
-            process_result(result)
-            
-            # Wait before next iteration
-            time.sleep(60)
+            # Token is about to expire, loop will exit and recreate session
+            # with new token on next outer loop iteration
 
 run_agent_job()
 ```
