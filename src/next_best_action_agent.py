@@ -41,6 +41,22 @@ from memory import (
     UserAccessDataGenerator, User, AuthEvent, AuthEventType,
 )
 
+# Fabric Data Agents imports
+try:
+    from fabric_tools import (
+        fabric_query_lakehouse_tool,
+        fabric_query_warehouse_tool,
+        fabric_trigger_pipeline_tool,
+        fabric_get_pipeline_status_tool,
+        fabric_query_semantic_model_tool,
+        fabric_list_resources_tool,
+        FABRIC_DATA_AGENTS_ENABLED,
+    )
+    FABRIC_DATA_AGENTS_AVAILABLE = True
+except ImportError:
+    FABRIC_DATA_AGENTS_AVAILABLE = False
+    logger.warning("fabric_tools not available - Fabric Data Agents will be disabled")
+
 # Agent Lightning imports (for fine-tuning and behavior optimization)
 try:
     from lightning import (
@@ -2657,6 +2673,147 @@ def lightning_get_stats_tool(agent_id: str = None) -> str:
     except Exception as e:
         logger.error(f"Error getting Lightning stats: {e}")
         return json.dumps({"error": str(e)})
+
+
+# =========================================
+# Fabric Data Agents Tools (delegated to fabric_tools.py)
+# =========================================
+
+@ai_function
+def fabric_query_lakehouse(lakehouse_id: str, query: str, lakehouse_name: str = "") -> str:
+    """
+    Execute a Spark SQL query against a Fabric Lakehouse.
+    
+    This tool allows AI agents to query data in Fabric Lakehouses using Spark SQL.
+    Use this for big data analytics, ETL operations, and data exploration.
+    
+    Args:
+        lakehouse_id: The ID of the lakehouse to query
+        query: The Spark SQL query to execute (e.g., "SELECT * FROM sales LIMIT 10")
+        lakehouse_name: Optional friendly name of the lakehouse for logging
+    
+    Returns:
+        JSON string containing query results with schema and data
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_query_lakehouse_tool(lakehouse_id, query, lakehouse_name)
+
+
+@ai_function
+def fabric_query_warehouse(warehouse_id: str, query: str, warehouse_name: str = "") -> str:
+    """
+    Execute a T-SQL query against a Fabric Data Warehouse.
+    
+    This tool allows AI agents to query data in Fabric Data Warehouses using T-SQL.
+    Use this for structured data analytics, reporting, and SQL-based operations.
+    
+    Args:
+        warehouse_id: The ID of the warehouse to query
+        query: The T-SQL query to execute (e.g., "SELECT TOP 10 * FROM customers")
+        warehouse_name: Optional friendly name of the warehouse for logging
+    
+    Returns:
+        JSON string containing query results with schema and data
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_query_warehouse_tool(warehouse_id, query, warehouse_name)
+
+
+@ai_function
+def fabric_trigger_pipeline(pipeline_id: str, pipeline_name: str = "", parameters: str = "{}") -> str:
+    """
+    Trigger execution of a Fabric Data Pipeline.
+    
+    This tool allows AI agents to start Fabric Data Pipelines for ETL, data movement,
+    and orchestration operations.
+    
+    Args:
+        pipeline_id: The ID of the pipeline to trigger
+        pipeline_name: Optional friendly name of the pipeline for logging
+        parameters: JSON string of parameters to pass to the pipeline (default: empty dict)
+    
+    Returns:
+        JSON string containing pipeline run information including run ID
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_trigger_pipeline_tool(pipeline_id, pipeline_name, parameters)
+
+
+@ai_function
+def fabric_get_pipeline_status(pipeline_id: str, run_id: str, pipeline_name: str = "") -> str:
+    """
+    Get the status of a Fabric Data Pipeline run.
+    
+    This tool allows AI agents to monitor the execution status of Fabric Data Pipelines.
+    Use this to check if a pipeline has completed, failed, or is still running.
+    
+    Args:
+        pipeline_id: The ID of the pipeline
+        run_id: The ID of the pipeline run to check
+        pipeline_name: Optional friendly name of the pipeline for logging
+    
+    Returns:
+        JSON string containing pipeline run status and details
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_get_pipeline_status_tool(pipeline_id, run_id, pipeline_name)
+
+
+@ai_function
+def fabric_query_semantic_model(
+    dataset_id: str,
+    query: str,
+    dataset_name: str = "",
+    query_language: str = "DAX"
+) -> str:
+    """
+    Query a Power BI semantic model (dataset) using DAX or MDX.
+    
+    This tool allows AI agents to query Power BI semantic models for analytics
+    and reporting. Supports both DAX (Data Analysis Expressions) and MDX queries.
+    
+    Args:
+        dataset_id: The ID of the semantic model (dataset) to query
+        query: The DAX or MDX query to execute
+        dataset_name: Optional friendly name of the dataset for logging
+        query_language: Query language to use ("DAX" or "MDX", default: "DAX")
+    
+    Returns:
+        JSON string containing query results with schema and data
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_query_semantic_model_tool(dataset_id, query, dataset_name, query_language)
+
+
+@ai_function
+def fabric_list_resources(resource_type: str = "all") -> str:
+    """
+    List Fabric resources in the workspace.
+    
+    This tool allows AI agents to discover available Fabric resources
+    (lakehouses, warehouses, pipelines, semantic models) in the workspace.
+    
+    Args:
+        resource_type: Type of resources to list ("lakehouse", "warehouse", "pipeline",
+                      "semantic_model", or "all" for all types)
+    
+    Returns:
+        JSON string containing list of resources
+    """
+    if not FABRIC_DATA_AGENTS_AVAILABLE:
+        return json.dumps({"error": "Fabric Data Agents not available - install required packages"})
+    
+    return fabric_list_resources_tool(resource_type)
 
 
 # Create the AI Agent with tools

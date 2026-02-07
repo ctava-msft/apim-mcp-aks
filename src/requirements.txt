@@ -27,3 +27,7 @@ numpy>=1.24.0
 
 # Environment management
 python-dotenv>=1.0.0
+
+# HTTP requests for Fabric API calls
+requests>=2.31.0
+

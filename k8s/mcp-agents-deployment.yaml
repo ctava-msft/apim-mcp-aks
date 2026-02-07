@@ -158,6 +158,13 @@ spec:
         - name: FABRIC_ONTOLOGY_PATH
           value: "${FABRIC_ONTOLOGY_PATH}"
         # =========================================
+        # Fabric Data Agents Configuration
+        # =========================================
+        - name: FABRIC_DATA_AGENTS_ENABLED
+          value: "${FABRIC_DATA_AGENTS_ENABLED}"
+        - name: FABRIC_API_ENDPOINT
+          value: "${FABRIC_API_ENDPOINT}"
+        # =========================================
         # Ontology Storage (Azure Blob - Fabric fallback)
         # =========================================
         - name: ONTOLOGY_CONTAINER_NAME

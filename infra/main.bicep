@@ -60,6 +60,15 @@ param fabricAdminEmail string = ''
 param fabricEnabled bool = false  // Set to true to enable Fabric capacity deployment
 
 // =========================================
+// Fabric Data Agents Configuration
+// =========================================
+@description('Enable Fabric Data Agents for lakehouse, warehouse, pipeline, and semantic model operations')
+param fabricDataAgentsEnabled bool = false  // Set to true to enable Fabric Data Agents
+
+@description('Fabric workspace ID for data agents (optional - can be created separately)')
+param fabricWorkspaceId string = ''
+
+// =========================================
 // Entra Agent Identity Configuration
 // =========================================
 @description('Enable Entra Agent Identity for the Next Best Action agent (preview feature)')
@@ -798,6 +807,26 @@ module fabricPrivateEndpoint 'app/fabric-PrivateEndpoint.bicep' = if (fabricEnab
   ]
 }
 
+// =========================================
+// Fabric Data Agents RBAC
+// =========================================
+// Role assignments for Fabric Data Agents to access lakehouses, warehouses, pipelines, and semantic models
+// Only deployed when both fabricEnabled and fabricDataAgentsEnabled are true
+
+module fabricDataAgents 'app/fabric-data-agents.bicep' = if (fabricEnabled && fabricDataAgentsEnabled && agentIdentityEnabled) {
+  name: 'fabricDataAgents'
+  scope: rg
+  params: {
+    agentPrincipalId: nextBestActionAgentIdentity!.outputs.agentIdentityPrincipalId
+    fabricCapacityId: fabricCapacity!.outputs.id
+    fabricCapacityName: fabricResourceName
+    fabricWorkspaceId: fabricWorkspaceId
+    location: location
+    tags: tags
+    fabricDataAgentsEnabled: fabricDataAgentsEnabled
+  }
+}
+
 // Monitor application with Azure Monitor
 module monitoring './core/monitor/monitoring.bicep' = {
   name: 'monitoring'
@@ -1026,6 +1055,11 @@ output FABRIC_ENABLED bool = fabricEnabled
 // OneLake endpoints (workspace-specific endpoints are constructed dynamically)
 output FABRIC_ONELAKE_DFS_ENDPOINT string = fabricEnabled ? 'https://onelake.dfs.fabric.microsoft.com' : ''
 output FABRIC_ONELAKE_BLOB_ENDPOINT string = fabricEnabled ? 'https://onelake.blob.fabric.microsoft.com' : ''
+
+// Fabric Data Agents outputs (only populated when both fabricEnabled and fabricDataAgentsEnabled are true)
+output FABRIC_DATA_AGENTS_ENABLED bool = fabricDataAgentsEnabled
+output FABRIC_WORKSPACE_ID string = fabricWorkspaceId
+output FABRIC_API_ENDPOINT string = fabricEnabled ? 'https://api.fabric.microsoft.com/v1' : ''
 
 // =========================================
 // Entra Agent Identity outputs
