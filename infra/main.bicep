@@ -143,6 +143,15 @@ param defenderForResourceManagerEnabled bool = true
 @description('Enable Defender for Container Registries')
 param defenderForContainerRegistryEnabled bool = true
 
+// =========================================
+// Microsoft Purview Configuration
+// =========================================
+@description('Enable Microsoft Purview for data governance and compliance')
+param purviewEnabled bool = false
+
+@description('Name for the Microsoft Purview account')
+param purviewAccountName string = ''
+
 // MCP Client APIM gateway specific variables
 
 var oauth_scopes = 'openid https://graph.microsoft.com/.default'
@@ -1005,6 +1014,69 @@ module defender './core/security/defender.bicep' = if (defenderEnabled && !empty
   }
 }
 
+// =========================================
+// Microsoft Purview
+// =========================================
+// Deploy Microsoft Purview for data governance, classification, lineage, and compliance
+var purviewResourceName = !empty(purviewAccountName) ? purviewAccountName : 'purview-${resourceToken}'
+
+module purviewAccount './core/purview/purview.bicep' = if (purviewEnabled) {
+  name: 'purviewAccount'
+  scope: rg
+  params: {
+    name: purviewResourceName
+    location: location
+    tags: tags
+    managedIdentityType: 'SystemAssigned'
+    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
+  }
+}
+
+// Purview Private Endpoints (when VNet is enabled)
+module purviewPrivateEndpoint './app/purview-PrivateEndpoint.bicep' = if (purviewEnabled && vnetEnabled) {
+  name: 'purviewPrivateEndpoint'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    virtualNetworkName: serviceVirtualNetworkName
+    subnetName: vnetEnabled ? serviceVirtualNetworkPrivateEndpointSubnetName : ''
+    resourceName: purviewResourceName
+  }
+  dependsOn: [
+    serviceVirtualNetwork
+    purviewAccount
+  ]
+}
+
+// Built-in Purview RBAC roles
+// Purview Data Reader - Read access to data catalog
+var PurviewDataReader = '4c48d476-69c1-41d0-88c2-9ac66e4b64f4'
+
+// Assign Purview Data Reader role to agent identity for runtime classification checks
+module purviewAgentRole './app/purview-RoleAssignment.bicep' = if (purviewEnabled && agentIdentityEnabled) {
+  name: 'purviewAgentRole'
+  scope: rg
+  params: {
+    purviewAccountName: purviewResourceName
+    roleDefinitionID: PurviewDataReader
+    principalID: nextBestActionAgentIdentity!.outputs.agentIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Grant Purview managed identity access to scan Cosmos DB data sources
+module purviewScanCosmosRole './app/cosmos-RoleAssignment.bicep' = if (purviewEnabled) {
+  name: 'purviewScanCosmosRole'
+  scope: rg
+  params: {
+    cosmosAccountName: cosmosAccount.outputs.name
+    roleDefinitionID: '00000000-0000-0000-0000-000000000001'  // Cosmos DB Built-in Data Reader
+    principalID: purviewAccount!.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 
 // App outputs
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
@@ -1095,5 +1167,15 @@ output DEFENDER_FOR_KEY_VAULT_ENABLED bool = defenderForKeyVaultEnabled
 output DEFENDER_FOR_COSMOS_DB_ENABLED bool = defenderForCosmosDBEnabled
 output DEFENDER_FOR_APIS_ENABLED bool = defenderForAPIsEnabled
 output DEFENDER_FOR_RESOURCE_MANAGER_ENABLED bool = defenderForResourceManagerEnabled
+
+// =========================================
+// Microsoft Purview outputs
+// =========================================
+output PURVIEW_ENABLED bool = purviewEnabled
+output PURVIEW_ACCOUNT_NAME string = purviewEnabled ? purviewAccount!.outputs.name : ''
+output PURVIEW_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.endpoint : ''
+output PURVIEW_CATALOG_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.catalogEndpoint : ''
+output PURVIEW_SCAN_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.scanEndpoint : ''
+output PURVIEW_MANAGED_RESOURCE_GROUP string = purviewEnabled ? purviewAccount!.outputs.managedResourceGroupName : ''
 
 
