@@ -107,6 +107,18 @@ All backing services are configured with private endpoints when `vnetEnabled=tru
 - **Conditional Deployment:** Only when `fabricEnabled=true`
 - **Status:** ✅ Fully private connectivity when enabled
 
+#### ✅ Microsoft Purview (Optional)
+- **Module:** `infra/app/purview-PrivateEndpoint.bicep`
+- **Account Private Endpoint:** `{resourceName}-account-private-endpoint`
+- **Portal Private Endpoint:** `{resourceName}-portal-private-endpoint`
+- **DNS Zones:**
+  - `privatelink.purview.azure.com`
+  - `privatelink.purviewstudio.azure.com`
+- **Group IDs:** `account`, `portal`
+- **Public Access:** `Disabled` (default)
+- **Conditional Deployment:** Only when `purviewEnabled=true` and `vnetEnabled=true`
+- **Status:** ✅ Fully private connectivity for data governance when enabled
+
 ### 1.3 APIM → AKS Communication Path
 
 **Architecture Decision:**
@@ -170,7 +182,7 @@ For environments requiring fully private APIM → AKS connectivity:
 
 ### 2.1 Identity Model Overview
 
-The solution implements a **multi-layered identity model** with clear security boundaries across four planes:
+The solution implements a **multi-layered identity model** with clear security boundaries across five planes:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -191,6 +203,12 @@ The solution implements a **multi-layered identity model** with clear security b
 │  Infrastructure Provisioning & Identity Bootstrap          │
 │  • entra-app-user-assigned-identity (APIM OAuth)            │
 │  • id-mcp-{token} (Agent Blueprint Creation)                │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│         DATA GOVERNANCE PLANE (Optional)                    │
+│  Data Scanning & Catalog Management                        │
+│  • purview-{token} (System Assigned Managed Identity)       │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -278,9 +296,21 @@ Resource Operation
   - Storage Queue Data Contributor (deployment scripts)
 - **Status:** ✅ Properly scoped for deployment operations
 
+#### Data Governance Plane (Optional)
+
+**6. Purview Managed Identity** (`purview-{token}`)
+- **Type:** System Assigned Managed Identity
+- **Module:** `infra/core/purview/purview.bicep`
+- **Purpose:** Data scanning and catalog management
+- **Conditional:** Only when `purviewEnabled=true`
+- **RBAC:**
+  - Cosmos DB Data Reader (scan agent memory for data governance)
+  - Storage Blob Data Reader (scan ontologies and artifacts)
+- **Status:** ✅ Data plane read-only access for scanning
+
 #### AI Agent Runtime Plane
 
-**6. Entra Agent Identity** (`NextBestAction-Agent-{token}`)
+**7. Entra Agent Identity** (`NextBestAction-Agent-{token}`)
 - **Type:** Entra Agent Identity
 - **Blueprint:** `NextBestAction-Blueprint-{token}`
 - **Federated to:** `mcp-agent-sa` ServiceAccount in `mcp-agents` namespace
@@ -401,7 +431,31 @@ azd provision
 
 ✅ **Recommendation:** Enable for production deployments.
 
-### 6.2 Azure Policy Compliance
+### 6.2 Microsoft Purview for Data Governance
+
+✅ **Available and Configurable (Optional)**
+
+**Purpose:**
+- Data classification and sensitivity labeling
+- Data lineage tracking for agent operations
+- Compliance reporting and audit trails
+- Data catalog for agent artifacts and memory
+
+**Configuration:**
+```bash
+azd env set PURVIEW_ENABLED true
+azd provision
+```
+
+**Security Features:**
+- System Assigned Managed Identity for scanning
+- Private endpoints for account and portal
+- Read-only access to Cosmos DB and Storage
+- Data plane RBAC (no control plane access)
+
+✅ **Recommendation:** Enable for regulated industries requiring data governance.
+
+### 6.3 Azure Policy Compliance
 
 **Recommended Policies:**
 1. ✅ Require managed identities for Azure resources
@@ -409,7 +463,7 @@ azd provision
 3. ✅ Require private endpoints for Azure services
 4. ✅ Enable diagnostic logging for all resources
 
-### 6.3 Audit Logging
+### 6.4 Audit Logging
 
 ✅ **Configured:** Application Insights, Log Analytics, AKS Container Insights, Azure Activity Log
 
@@ -431,10 +485,26 @@ azd provision
 - AI Search private endpoint
 - **ACR private endpoint** ✅
 - Fabric private endpoint (if Fabric enabled)
+- Purview private endpoint (if Purview enabled)
 
 All services automatically set `publicNetworkAccess: 'Disabled'` when VNet enabled.
 
-### 7.2 Enable Defender for Cloud
+### 7.2 Enable Microsoft Purview (Optional)
+
+For data governance and compliance:
+
+```bash
+azd env set PURVIEW_ENABLED true
+azd provision
+```
+
+**What this enables:**
+- Microsoft Purview account with System Assigned Managed Identity
+- Private endpoints for Purview account and portal (when VNet enabled)
+- Cosmos DB read access for data scanning
+- Data catalog and governance capabilities
+
+### 7.3 Enable Defender for Cloud
 
 ```bash
 azd env set DEFENDER_ENABLED true
@@ -442,7 +512,7 @@ azd env set DEFENDER_SECURITY_CONTACT_EMAIL "security@example.com"
 azd provision
 ```
 
-### 7.3 Optional: Internal LoadBalancer
+### 7.4 Optional: Internal LoadBalancer
 
 For environments requiring fully private APIM → AKS connectivity:
 
@@ -527,6 +597,7 @@ The Azure Agents Control Plane demonstrates **strong security fundamentals** sui
 ### 📋 Compliance Readiness
 
 - ✅ Microsoft Defender for Cloud integration available
+- ✅ Microsoft Purview for data governance (optional)
 - ✅ Azure Policy enforcement capable
 - ✅ Comprehensive audit logging
 - ✅ Identity-first architecture
@@ -544,7 +615,9 @@ The architecture is production-ready with strong security fundamentals. The iden
 ### Documentation
 - [Azure Agents Identity Design](AGENTS_IDENTITY_DESIGN.md)
 - [Azure Agents Architecture](AGENTS_ARCHITECTURE.md)
-- [Microsoft Defender for Cloud Testing](DEFENDER_FOR_CLOUD_TESTING.md)
+- [Microsoft Defender for Cloud](DEFENDER_FOR_CLOUD.md)
+- [Microsoft Purview Integration](PURVIEW_INTEGRATION.md)
+- [External Agents MCP Integration](AGENTS_EXTERNAL_MCP_INTEGRATION.md)
 
 ### Azure Best Practices
 - [Azure Well-Architected Framework - Security](https://learn.microsoft.com/azure/well-architected/security/)
@@ -559,6 +632,7 @@ The architecture is production-ready with strong security fundamentals. The iden
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** February 2026  
+**Review Date:** Post-main merge (Purview integration added)  
 **Next Review:** Quarterly or after significant architecture changes
