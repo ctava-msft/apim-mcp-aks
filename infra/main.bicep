@@ -298,7 +298,8 @@ module containerRegistry './core/acr/container-registry.bicep' = {
     containerRegistryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
     location: location
     tags: tags
-    sku: 'Standard'
+    sku: vnetEnabled ? 'Premium' : 'Standard' // Premium required when disabling public network access
+    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
   }
 }
 
@@ -369,6 +370,22 @@ module acrPullRoleAssignment 'core/acr/acr-role-assignment.bicep' = {
   }
   dependsOn: [
     aksCluster
+  ]
+}
+
+// Private endpoint for Azure Container Registry (when VNet enabled)
+module acrPrivateEndpoint 'app/acr-PrivateEndpoint.bicep' = if (vnetEnabled) {
+  name: 'acrPrivateEndpoint'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    virtualNetworkName: serviceVirtualNetworkName
+    subnetName: vnetEnabled ? serviceVirtualNetworkPrivateEndpointSubnetName : ''
+    acrName: containerRegistry.outputs.containerRegistryName
+  }
+  dependsOn: [
+    serviceVirtualNetwork
   ]
 }
 

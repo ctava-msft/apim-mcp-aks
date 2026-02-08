@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-agents-loadbalancer-internal
+  namespace: mcp-agents
+  annotations:
+    # Use internal (private) load balancer within VNet
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    # Specify the subnet for the internal load balancer (matches AKS node subnet)
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "app"
+    # Optional: Resource group where the load balancer will be created (defaults to MC_* resource group)
+    # service.beta.kubernetes.io/azure-load-balancer-resource-group: "${AZURE_RESOURCE_GROUP_NAME}"
+spec:
+  type: LoadBalancer
+  # No static IP needed for internal load balancer - Azure assigns from subnet
+  selector:
+    app: mcp-agents
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000

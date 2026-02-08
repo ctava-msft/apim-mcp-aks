@@ -14,6 +14,10 @@ param sku string = 'Standard'
 @description('Enable admin user')
 param adminUserEnabled bool = false
 
+@description('Public network access setting')
+@allowed(['Enabled', 'Disabled'])
+param publicNetworkAccess string = 'Enabled'
+
 // Azure Container Registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: containerRegistryName
@@ -24,7 +28,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
   }
   properties: {
     adminUserEnabled: adminUserEnabled
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: publicNetworkAccess
     networkRuleBypassOptions: 'AzureServices'
   }
 }
