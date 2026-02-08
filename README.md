@@ -147,6 +147,42 @@ The Defender module will automatically:
 
 **Note:** Defender for Cloud incurs additional costs. Review [Microsoft Defender for Cloud pricing](https://azure.microsoft.com/pricing/details/defender-for-cloud/) before enabling.
 
+### Microsoft Purview for Data Governance
+
+The infrastructure includes optional Microsoft Purview integration for comprehensive data governance, classification, lineage tracking, and compliance management of AI agent operations.
+
+**Purview Capabilities:**
+- **Data Classification** - Automatic sensitivity labeling for agent inputs/outputs
+- **Data Lineage** - End-to-end tracking of data flow through agent operations
+- **Compliance Reporting** - Audit trails for regulatory requirements (SOC2, ISO27001, GDPR)
+- **Data Catalog** - Unified view of agent knowledge assets, ontologies, and facts
+
+**Configuration:**
+
+To enable Microsoft Purview, set the following environment variable before deployment:
+
+```bash
+# Enable Microsoft Purview
+azd env set PURVIEW_ENABLED true
+
+# Deploy infrastructure
+azd provision
+```
+
+The Purview module will automatically:
+- Deploy Purview account with managed identity
+- Configure private endpoints (if VNet is enabled)
+- Grant role-based access to Purview for agent identity
+- Configure Cosmos DB scanning permissions
+
+After deployment, follow the [Purview Integration Guide](docs/PURVIEW_INTEGRATION.md) for:
+- Registering data sources (Cosmos DB, Storage, Fabric)
+- Configuring classification rules
+- Setting up data lineage capture
+- Implementing compliance workflows
+
+**Note:** Microsoft Purview incurs additional costs. Review [Microsoft Purview pricing](https://azure.microsoft.com/pricing/details/purview/) before enabling.
+
 ---
 
 ## Verification
@@ -178,6 +214,7 @@ python tests/test_apim_mcp_connection.py --use-az-token
 | [AGENTS_TEST_RESULTS.md](docs/AGENTS_TEST_RESULTS.md)                                 | Integration test results                         |
 | [DEFENDER_FOR_CLOUD_TESTING.md](docs/DEFENDER_FOR_CLOUD_TESTING.md)                   | Defender for Cloud deployment and testing guide  |
 | [SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)                                         | Security review: private networking and identity |
+| [PURVIEW_INTEGRATION.md](docs/PURVIEW_INTEGRATION.md)                                 | Purview data governance and compliance guide     |
 
 ---
 
@@ -208,6 +245,9 @@ python tests/test_apim_mcp_connection.py --use-az-token
 - [Microsoft Entra Agent Identity](https://learn.microsoft.com/entra/workload-id/)
 - [Workload Identity Federation](https://learn.microsoft.com/azure/aks/workload-identity-overview)
 - [Microsoft Defender for Cloud](https://learn.microsoft.com/azure/defender-for-cloud/)
+- [Microsoft Purview](https://learn.microsoft.com/azure/purview/)
+- [Microsoft Purview Data Catalog](https://learn.microsoft.com/azure/purview/catalog-introduction)
+- [Microsoft Purview Data Lineage](https://learn.microsoft.com/azure/purview/concept-data-lineage)
 
 ### Agent Frameworks & Tools
 

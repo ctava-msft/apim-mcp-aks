@@ -1,0 +1,131 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.40.2.10011",
+      "templateHash": "9657824003683952405"
+    }
+  },
+  "parameters": {
+    "agentPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Principal ID of the agent identity"
+      }
+    },
+    "fabricCapacityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Fabric capacity"
+      }
+    },
+    "fabricCapacityName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Fabric capacity"
+      }
+    },
+    "fabricWorkspaceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Fabric workspace ID for data agents"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for Fabric resources"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags for all resources"
+      }
+    },
+    "fabricDataAgentsEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable Fabric Data Agents (default: false)"
+      }
+    },
+    "deploymentSuffix": {
+      "type": "string",
+      "defaultValue": "fabric-data-v1",
+      "metadata": {
+        "description": "Unique suffix for role assignment names"
+      }
+    }
+  },
+  "variables": {
+    "FabricReader": "acdd72a7-3385-48ef-bd42-f606fba81ae7",
+    "FabricContributor": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+    "StorageBlobDataReader": "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1",
+    "StorageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+  },
+  "resources": [
+    {
+      "condition": "[parameters('fabricDataAgentsEnabled')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName'))]",
+      "name": "[guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('FabricReader'), parameters('deploymentSuffix'))]",
+      "properties": {
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('FabricReader'))]",
+        "principalId": "[parameters('agentPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "description": "Allows Fabric Data Agents to view workspace and resources"
+      }
+    },
+    {
+      "condition": "[parameters('fabricDataAgentsEnabled')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName'))]",
+      "name": "[guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('FabricContributor'), parameters('deploymentSuffix'))]",
+      "properties": {
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('FabricContributor'))]",
+        "principalId": "[parameters('agentPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "description": "Allows Fabric Data Agents to manage lakehouses, warehouses, and pipelines"
+      }
+    },
+    {
+      "condition": "[parameters('fabricDataAgentsEnabled')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName'))]",
+      "name": "[guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('StorageBlobDataContributor'), parameters('deploymentSuffix'), 'onelake')]",
+      "properties": {
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('StorageBlobDataContributor'))]",
+        "principalId": "[parameters('agentPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "description": "Allows Fabric Data Agents to read/write data through OneLake"
+      }
+    }
+  ],
+  "outputs": {
+    "fabricReaderRoleAssignmentId": {
+      "type": "string",
+      "value": "[if(parameters('fabricDataAgentsEnabled'), extensionResourceId(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('FabricReader'), parameters('deploymentSuffix'))), '')]"
+    },
+    "fabricContributorRoleAssignmentId": {
+      "type": "string",
+      "value": "[if(parameters('fabricDataAgentsEnabled'), extensionResourceId(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('FabricContributor'), parameters('deploymentSuffix'))), '')]"
+    },
+    "onelakeDataContributorRoleAssignmentId": {
+      "type": "string",
+      "value": "[if(parameters('fabricDataAgentsEnabled'), extensionResourceId(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Fabric/capacities', parameters('fabricCapacityName')), parameters('agentPrincipalId'), variables('StorageBlobDataContributor'), parameters('deploymentSuffix'), 'onelake')), '')]"
+    },
+    "fabricWorkspaceId": {
+      "type": "string",
+      "value": "[parameters('fabricWorkspaceId')]"
+    }
+  }
+}

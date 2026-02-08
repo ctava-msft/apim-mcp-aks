@@ -32,7 +32,7 @@ param location string = resourceGroup().location
 @description('Tags for all resources')
 param tags object = {}
 
-@description('Enable Fabric Data Agents (default: true when Fabric is enabled)')
+@description('Enable Fabric Data Agents (default: false)')
 param fabricDataAgentsEnabled bool = false
 
 @description('Unique suffix for role assignment names')
