@@ -25,18 +25,7 @@ This lab guides you through creating a new AI agent using Azure as the secured, 
 
 ### What is the Azure Agents Control Plane?
 
-The Azure Agents Control Plane is a comprehensive solution accelerator that governs the complete software development lifecycle of enterprise AI agents:
-
-- **Analysis** - Understanding business problems and requirements
-- **Design** - Creating agent specifications and architecture
-- **Development** - Building agents with Copilot and SpecKit methodology
-- **Testing** - Validating agent behavior and compliance
-- **Deployment** - Releasing agents to secured, governed runtimes
-- **Observation** - Monitoring agent behavior and performance
-- **Fine-Tuning** - Optimizing agent responses through reinforcement learning - rewards and penalities
-- **Evaluation** - Measuring agent performance and task adherence
-
-The following solution architecture diagram depicts the Azure Agents Control Plane runtime architecture:
+The Azure Agents Control Plane is a comprehensive solution accelerator that secures, governs a control plane for agents. The following solution architecture diagram depicts the Azure Agents Control Plane runtime architecture:
 
 ![Agent Control Plane ](../runtime.svg)
 
@@ -119,8 +108,7 @@ Review objectives, architecture, and validate your environment is ready.
 **Key Activities:**
 - Review lab objectives and solution architecture
 - Understand the Azure Agents Control Plane
-- Review and build an initial mental model for all exercises
-- Run `test_mcp_connection.py` to confirm environment works
+- Run test(s) to confirm environment works
 
 **[Full Exercise →](exercises/exercise_01_lab_review.md)**
 

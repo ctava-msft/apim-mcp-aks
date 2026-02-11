@@ -55,7 +55,7 @@ try:
     FABRIC_DATA_AGENTS_AVAILABLE = True
 except ImportError:
     FABRIC_DATA_AGENTS_AVAILABLE = False
-    logger.warning("fabric_tools not available - Fabric Data Agents will be disabled")
+    print("WARNING: fabric_tools not available - Fabric Data Agents will be disabled")
 
 # Agent Lightning imports (for fine-tuning and behavior optimization)
 try:

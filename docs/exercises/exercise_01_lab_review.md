@@ -4,7 +4,7 @@
 
 ## Overview
 
-This exercise introduces the lab environment, reviews the solution architecture, and validates that your environment is properly configured.
+This exercise reviews the solution architecture, introduces the lab, and validates that your environment is properly configured.
 
 ---
 
@@ -12,22 +12,22 @@ This exercise introduces the lab environment, reviews the solution architecture,
 
 By completing this lab, you will learn how to:
 
-### Building Your Agent
-- ✅ Review the SpecKit constitution and understand governance principles
-- ✅ Write a structured agent specification following the SpecKit methodology
-- ✅ Implement an MCP-compliant agent using FastAPI
-- ✅ Containerize your agent with Docker
-- ✅ Deploy your agent to AKS as a new pod
-- ✅ Integrate with the Azure Agents Control Plane infrastructure
+### Build Your Agent
+- ✅ Review the SpecKit constitution and understand the SDLC principles in play
+- ✅ Write a detailed specification for your agent by following the SpecKit methodology
+- ✅ Integrate with the Azure Agents Control Plane infrastructure as follows:
+  - ✅ Implement an MCP-compliant agent using FastAPI
+  - ✅ Containerize your agent with Docker
+  - ✅ Deploy your agent to AKS as a new pod
 
 ### Enterprise Governance
 - ✅ Understand how Azure API Management acts as the governance gateway
-- ✅ Inspect APIM policies that enforce rate limits, quotas, and compliance
+- ✅ Inspect APIM policies that enforce rate limits, quotas, and compliance with enterprise standards
 - ✅ Trace requests through the control plane using distributed tracing
 
 ### Security & Identity
-- ✅ Configure workload identity federation for AKS pods
-- ✅ Implement least-privilege RBAC for agent tool access
+- ✅ Configure identity for agents running in AKS pods
+- ✅ Implement least-privilege RBAC for agent resources and tooling access
 - ✅ Validate keyless authentication patterns
 
 ### Observability
@@ -46,20 +46,13 @@ By completing this lab, you will learn how to:
 
 ### Azure Agents Control Plane
 
-The Azure Agents Control Plane governs the complete software development lifecycle of enterprise AI agents:
+The Azure Agents Control Plane provides centralized security, governance, and observability for enterprise AI agents. The following diagram depicts the runtime architecture:
 
-![Agent Software Development Lifecycle](../buildtime.svg)
-
-- **Analysis** - Understanding business problems and requirements
-- **Design** - Creating agent specifications and architecture
-- **Development** - Building agents with Copilot and SpecKit methodology
-- **Testing** - Validating agent behavior and compliance
-- **Deployment** - Releasing agents to governed runtimes
-- **Observation** - Monitoring agent behavior and performance
-- **Fine-Tuning** - Optimizing agent responses through reinforcement learning
-- **Evaluation** - Measuring agent quality and task adherence
+![Agent Software Development Lifecycle](../../runtime.svg)
 
 ### Architecture Components
+
+The control plane is composed of Azure services that each fulfill a distinct role — from API governance and identity to memory, observability, and human oversight. Together, they form a layered architecture where every agent request is authenticated, authorized, planned, actioned, logged, and traceable.
 
 | Component | Azure Service | Purpose |
 |-----------|---------------|---------|
@@ -75,7 +68,12 @@ The Azure Agents Control Plane governs the complete software development lifecyc
 
 ### SpecKit Methodology
 
-SpecKit is a **specification-driven development methodology** that ensures all agents are properly defined before implementation:
+SpecKit is a **specification-driven development methodology** that ensures all agents are properly defined before implementation. Rather than jumping straight into code, SpecKit requires you to first articulate what your agent does, what tools it exposes, its governance model, and its expected behavior — all in a structured specification document.
+
+The project is organized around two key artifacts:
+
+- **Constitution** — The governance framework that applies to all agents in the project. It defines shared principles such as security posture, naming conventions, MCP compliance requirements, and approval policies. Every agent specification must conform to the constitution.
+- **Specifications** — Individual agent definitions that describe the agent's domain, tools, input/output schemas, risk levels, and test criteria. In Exercise 2, you will write your own specification before generating any implementation code.
 
 ```
 .speckit/
@@ -83,97 +81,92 @@ SpecKit is a **specification-driven development methodology** that ensures all a
 └── specifications/           # Individual agent specifications
     ├── customer_churn_agent.spec.md
     ├── devops_cicd_pipeline_agent.spec.md
-    └── your_agent.spec.md    # Your agent specification
+    └── your_agent.spec.md    # Your agent specification (Exercise 2)
 ```
 
----
+The SpecKit workflow follows this sequence:
 
-## Step 1.3: Review Exercises
+1. **Review the constitution** to understand the rules your agent must follow
+2. **Write a specification** describing your agent's purpose, tools, and governance model
+3. **Use GitHub Copilot** to generate implementation code from the specification
+4. **Validate** that the implementation matches the specification through testing
 
-| Exercise | Duration | Description |
-|----------|----------|-------------|
-| **Exercise 1: Lab Review** | 30 min | Review objectives, architecture, validate environment |
-| **Exercise 2: Build Agents** | 2 hr | Use GitHub Copilot and SpecKit to specify, create, test, and deploy agents |
-| **Exercise 3: Review End-to-End** | 30 min | Inspect governance, memory, observability, and identify problems |
-| **Exercise 4: Fine-Tune Agent** | 1 hr | Use Agent Lightning to fine-tune and correct agent behavior |
-| **Exercise 5: Evaluations** | 1 hr | Use evaluation framework to measure task adherence |
-
-**Total Lab Duration:** 5 hours
+You will work hands-on with SpecKit in [Exercise 2: Build Agents](exercise_02_build_agents.md).
 
 ---
 
-## Step 1.4: Validate Environment
+## Step 1.3: Validate Environment
 
-Run the environment validation script to confirm everything is properly configured.
+Use **GitHub Copilot in Agent Mode** to complete each validation step below. Open Copilot Chat (`Ctrl+Alt+I`), select **Agent** mode from the dropdown, and enter the prompts listed for each step. Copilot will run the commands in VS Code's integrated terminal and help you resolve any issues.
 
 ### Prerequisites Check
 
-```powershell
-# Check Python version (3.11+ required)
-python --version
+Prompt Copilot:
 
-# Check Docker
-docker --version
+> *"Check that I have the prerequisites installed: Python 3.11+, Docker, Azure CLI (az and azd), and kubectl. Also verify I'm logged in to Azure."*
 
-# Check Azure CLI
-az --version
-
-# Check kubectl
-kubectl version --client
-
-# Check you're logged in to Azure
-az account show
-```
+Copilot will run the version checks and report any missing tools.
 
 ### AKS Cluster Access
 
-```powershell
-# Verify AKS connection
-kubectl get nodes
+Prompt Copilot:
 
-# Verify mcp-agents namespace exists
-kubectl get namespace mcp-agents
-```
+> *"Verify I can connect to the AKS cluster and that the mcp-agents namespace exists."*
+
+Copilot will run `kubectl get nodes` and `kubectl get namespace mcp-agents`. If the connection fails, ask Copilot: *"Help me get AKS credentials for my cluster."*
 
 ### Environment Variables
 
-Ensure these are set in your terminal session:
+Prompt Copilot:
 
-```powershell
-# Required environment variables
-$env:CONTAINER_REGISTRY      # e.g., "youracr.azurecr.io"
-$env:AZURE_TENANT_ID         # Your Azure tenant ID
-$env:FOUNDRY_PROJECT_ENDPOINT # Azure AI Foundry endpoint
-$env:COSMOSDB_ENDPOINT        # CosmosDB endpoint
-```
+> *"Check that the required environment variables are set: CONTAINER_REGISTRY, AZURE_TENANT_ID, FOUNDRY_PROJECT_ENDPOINT, and COSMOSDB_ENDPOINT."*
+
+Copilot will inspect your terminal session and identify any missing variables. If values are missing, ask Copilot: *"Help me set the missing environment variables from my Azure deployment."*
+
+### Port-Forward Tunnel to MCP Agents
+
+Prompt Copilot:
+
+> *"Open a port-forward tunnel to the mcp-agents service in AKS on port 8000."*
+
+Copilot will run `kubectl port-forward -n mcp-agents svc/mcp-agents 8000:80` in a background terminal. While the tunnel is active, agent endpoints are available at `http://localhost:8000`. Use a separate terminal for running tests.
 
 ### Execute Environment Validation Test
 
-Run the test script to confirm the MCP connection to AKS works:
+Prompt Copilot:
 
-```powershell
-# Navigate to tests directory
-cd tests
+> *"Activate the .venv virtual environment and run tests/test_next_best_action.py in direct mode."*
 
-# Run the MCP connection test
-python test_mcp_connection.py
-```
+Copilot will activate the virtual environment, navigate to the tests directory, and execute the connection test.
 
 **Expected Output:**
 
 ```
-============================================================
-MCP Connection Test
-============================================================
-✅ AKS cluster connection successful
-✅ MCP agents namespace found
-✅ MCP server pods running
-✅ MCP health endpoint responding
-✅ MCP initialize method successful
-✅ MCP tools/list method successful
-============================================================
-All tests passed! Environment is ready.
-============================================================
+======================================================================
+🧪 Testing next_best_action MCP Tool
+======================================================================
+✅ Loaded configuration from tests/mcp_test_config.json
+🔗 Direct Mode URL: http://localhost:8000/runtime/webhooks/mcp
+
+📡 Establishing SSE session...
+✅ Got session URL
+
+📋 Listing available tools...
+✅ Found 36 tools
+✅ Memory tools available - short-term memory is enabled
+
+======================================================================
+🤖 Testing next_best_action with sample tasks
+======================================================================
+
+🎯 Test 1/3 — Analyze customer churn data...
+✅ Task analysis complete (plan generated, stored in Cosmos)
+
+🎯 Test 2/3 — Set up a CI/CD pipeline...
+✅ Task analysis complete (plan generated, stored in Cosmos)
+
+🎯 Test 3/3 — Design a REST API...
+✅ Task analysis complete (plan generated, stored in Cosmos)
 ```
 
 ### Troubleshooting
@@ -197,7 +190,6 @@ Before proceeding to Exercise 2, confirm:
 
 - [ ] Reviewed lab objectives and understand what you will build
 - [ ] Reviewed solution architecture and key Azure services
-- [ ] Reviewed all 5 exercises and understand the lab flow
 - [ ] Environment validation script executed successfully
 - [ ] All required tools installed (Python, Docker, Azure CLI, kubectl)
 - [ ] Connected to AKS cluster
