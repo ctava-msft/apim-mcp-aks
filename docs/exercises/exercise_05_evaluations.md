@@ -1,6 +1,6 @@
 # Exercise 5: Evaluations
 
-**Duration:** 1 hour
+**Duration:** 30 minutes
 
 ## Overview
 

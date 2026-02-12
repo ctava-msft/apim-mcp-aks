@@ -114,7 +114,7 @@ Review objectives, architecture, and validate your environment is ready.
 
 ---
 
-### Exercise 2: Build Agents (2 hours)
+### Exercise 2: Build Agents (1 hour)
 
 Use GitHub Copilot and SpecKit to specify, create, unit test, deploy and functionally test your agent(s).
 
@@ -122,7 +122,6 @@ Use GitHub Copilot and SpecKit to specify, create, unit test, deploy and functio
 - Review the project constitution
 - Use Copilot for specification, implementation, and testing
 - Build an **Autonomous Agent** that operates without human intervention
-- (Optional) Build a **Human-in-the-Loop Agent** with Agent 365 approval workflow
 - Deploy agent(s) to AKS in a single pod
 
 **[Full Exercise →](exercises/exercise_02_build_agents.md)**
@@ -164,7 +163,7 @@ Use Agent Lightning to fine-tune and correct agent behavior.
 
 ---
 
-### Exercise 5: Evaluations (1 hour)
+### Exercise 5: Evaluations (30 minutes)
 
 Use the evaluation framework to measure agent performance and task adherence.
 

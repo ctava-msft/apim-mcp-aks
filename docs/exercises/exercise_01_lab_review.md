@@ -135,7 +135,7 @@ Copilot will run `kubectl port-forward -n mcp-agents svc/mcp-agents 8000:80` in 
 
 Prompt Copilot:
 
-> *"Activate the .venv virtual environment and run tests/test_next_best_action.py in direct mode."*
+> *"Activate the .venv virtual environment and run tests/test_next_best_action_functionals.py in direct mode."*
 
 Copilot will activate the virtual environment, navigate to the tests directory, and execute the connection test.
 

@@ -230,7 +230,7 @@ kubectl get svc -n mcp-agents mcp-agents-loadbalancer
 ```powershell
 python tests/test_apim_mcp_connection.py --direct
 python tests/test_ask_foundry.py --direct
-python tests/test_next_best_action.py --direct
+python tests/test_next_best_action_functional.py --direct
 ```
 
 ## 📝 Next Actions

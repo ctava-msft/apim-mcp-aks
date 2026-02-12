@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The Azure Agents Control Plane governs the complete lifecycle of enterprise AI agents: analysis, design, development, testing, fine-tuning, and evaluation. This constitution establishes the principles, standards, and governance framework for building agents using Azure API Management (APIM), Model Context Protocol (MCP), and Azure Kubernetes Service (AKS) as the foundational control plane infrastructure.
+The Azure Agents Control Plane governs the complete lifecycle of enterprise AI agents, SDLC: analysis, design, development, testing, fine-tuning, and evaluation. This constitution establishes the principles, standards, and governance framework for building agents using Azure API Management (APIM), Model Context Protocol (MCP), and Azure Kubernetes Service (AKS) as the foundational control plane infrastructure.
 
 **Mission**: Enable enterprise-grade AI agent development where Azure provides centralized governance, observability, identity, and compliance—regardless of agent execution location.
 
