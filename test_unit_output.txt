@@ -1,0 +1,38 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\christava\Documents\src\github.com\ctava-msft\agents-top\apim-mcp-aks\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\christava\Documents\src\github.com\ctava-msft\agents-top\apim-mcp-aks
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 37 items
+
+tests/test_autonomous_agent_unit.py::TestHealthEndpoint::test_health_returns_healthy PASSED [  2%]
+tests/test_autonomous_agent_unit.py::TestRootEndpoint::test_root_returns_server_info PASSED [  5%]
+tests/test_autonomous_agent_unit.py::TestMCPInitialize::test_initialize_returns_capabilities PASSED [  8%]
+tests/test_autonomous_agent_unit.py::TestMCPInitialize::test_invalid_jsonrpc_version PASSED [ 10%]
+tests/test_autonomous_agent_unit.py::TestMCPInitialize::test_unknown_method PASSED [ 13%]
+tests/test_autonomous_agent_unit.py::TestToolsList::test_tools_have_input_schema PASSED [ 16%]
+tests/test_autonomous_agent_unit.py::TestToolsList::test_tools_list_returns_all_tools PASSED [ 18%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_create_retention_case PASSED [ 21%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_create_retention_case_missing_action PASSED [ 24%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_churn_prediction PASSED [ 27%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_churn_prediction_missing_id PASSED [ 29%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_customer_facts PASSED [ 32%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_customer_facts_missing_id PASSED [ 35%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_customer_segment PASSED [ 37%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_get_customer_segment_missing_id PASSED [ 40%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_log_analysis_result PASSED [ 43%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_log_analysis_result_missing_result PASSED [ 45%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_recommend_retention_action_critical PASSED [ 48%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_recommend_retention_action_elevated PASSED [ 51%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_recommend_retention_action_missing_args PASSED [ 54%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_recommend_retention_action_normal PASSED [ 56%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_search_similar_churned PASSED [ 59%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_search_similar_churned_missing_profile PASSED [ 62%]
+tests/test_autonomous_agent_unit.py::TestToolsCall::test_unknown_tool PASSED [ 64%]
+tests/test_autonomous_agent_unit.py::TestExecuteToolDirect::test_execute_tool_returns_result PASSED [ 67%]
+tests/test_autonomous_agent_unit.py::TestExecuteToolDirect::test_execute_tool_unknown PASSED [ 70%]
+tests/test_autonomous_agent_unit.py::TestDataclasses::test_mcp_tool_fields PASSED [ 72%]
+tests/test_autonomous_agent_unit.py::TestDataclasses::test_mcp_tool_result_defaults PASSED [ 75%]
+tests/test_autonomous_agent_unit.py::TestDataclasses::test_mcp_tool_result_error PASSED [ 78%]
+tests/test_autonomous_agent_unit.py::TestSSEEndpoint::test_sse_returns_event_stream 

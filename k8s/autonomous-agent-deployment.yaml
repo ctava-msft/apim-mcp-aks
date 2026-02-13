@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autonomous-agent
+  namespace: mcp-agents
+  labels:
+    app: autonomous-agent
+    agent: autonomous
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: autonomous-agent
+  template:
+    metadata:
+      labels:
+        app: autonomous-agent
+        azure.workload.identity/use: "true"
+        agent: autonomous
+      annotations:
+        entra.agent-id/enabled: "true"
+    spec:
+      serviceAccountName: mcp-agents-sa
+      containers:
+      - name: autonomous-agent
+        image: ${CONTAINER_REGISTRY}/autonomous-agent:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+          name: http
+          protocol: TCP
+        env:
+        # =========================================
+        # Entra Agent Identity Configuration
+        # =========================================
+        - name: AGENT_IDENTITY_ENABLED
+          value: "true"
+        - name: AZURE_CLIENT_ID
+          value: "${AGENT_IDENTITY_APP_ID}"
+        # =========================================
+        # Azure AI Foundry Configuration
+        # =========================================
+        - name: FOUNDRY_PROJECT_ENDPOINT
+          value: "${FOUNDRY_PROJECT_ENDPOINT}"
+        - name: AZURE_AI_PROJECT_ENDPOINT
+          value: "${FOUNDRY_PROJECT_ENDPOINT}"
+        - name: FOUNDRY_MODEL_DEPLOYMENT_NAME
+          value: "${FOUNDRY_MODEL_DEPLOYMENT_NAME}"
+        - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+          value: "${FOUNDRY_MODEL_DEPLOYMENT_NAME}"
+        # =========================================
+        # CosmosDB Configuration
+        # =========================================
+        - name: COSMOSDB_ENDPOINT
+          value: "${COSMOSDB_ENDPOINT}"
+        - name: COSMOSDB_DATABASE_NAME
+          value: "${COSMOSDB_DATABASE_NAME}"
+        # =========================================
+        # Azure Storage Configuration
+        # =========================================
+        - name: AZURE_STORAGE_ACCOUNT_URL
+          value: "${AZURE_STORAGE_ACCOUNT_URL}"
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autonomous-agent
+  namespace: mcp-agents
+  labels:
+    app: autonomous-agent
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8001
+    protocol: TCP
+    name: http
+  selector:
+    app: autonomous-agent

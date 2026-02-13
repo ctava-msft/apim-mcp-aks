@@ -77,7 +77,7 @@ The specification should include:
 - Success Metrics
 - Security Requirements"
 
-If you want to alters an existing specification:
+If you want to alter an existing specification:
 **Prompt Copilot with:**
 > "Make a copy of the .speckit/specifications/<>.spec.md. Make the following changes to it: x,y,z."
 
@@ -87,7 +87,7 @@ For reference, review the existing `src/next_best_action_agent.py`, `src/next_be
 
 To create the agent,
 **Prompt Copilot with:**
-> "Implement an MCP-compliant FastAPI agent based on the <autonomous_agent.spec.md> specification. Utilize `src/next_best_action_agent.py` as a reference implementation. Build the implementation similar to the reference implementation but in its own new file `src/autonomous_agent.py. Be sure to include health endpoint, SSE endpoint, and message endpoint with tools/list and tools/call handlers. Also create pytest unit tests in `tests/test_autonomous_agent_unit.py` covering the health endpoint, MCP initialize, tools/list, and tools/call methods. Finally create functional tests in `tests/test_autonomous_agent_functional.py` covering the health endpoint, MCP initialize, tools/list, and tools/call methods."
+> "Implement an MCP-compliant FastAPI agent based on the <autonomous_agent.spec.md> specification. Utilize `src/next_best_action_agent.py` as a reference implementation. Build the implementation similar to the reference implementation but in its own new file `src/autonomous_agent.py. Be sure to include health endpoint, SSE endpoint, and message endpoint with tools/list and tools/call handlers. Also create pytest unit tests in `tests/test_autonomous_agent_unit.py` covering the health endpoint, MCP initialize, tools/list, and tools/call methods. Create functional tests in `tests/test_autonomous_agent_functional.py` covering the health endpoint, MCP initialize, tools/list, and tools/call methods. Make a new DockerFile specific to this new agent."
 
 ### Step B.3: Run Unit Tests with Copilot
 
@@ -97,7 +97,7 @@ To create the agent,
 ### Step B.4: Deploy Autonomous Agent with Copilot
 
 **Prompt Copilot (Agent Mode) with:**
-> "Build a Docker image from the src/ directory for my autonomous agent, tag it and push it to the Azure Container Registry using the CONTAINER_REGISTRY environment variable, then deploy it to AKS using k8s/autonomous-agent-deployment.yaml and verify the pods are running in the mcp-agents namespace."
+> "Build the new Docker image for this agent in the src/ directory for my autonomous agent, tag it and push it to the Azure Container Registry using the CONTAINER_REGISTRY environment variable, then deploy it to AKS using k8s/autonomous-agent-deployment.yaml and verify the pods are running in the mcp-agents namespace."
 
 ### Step B.5: Run Functional Tests with Copilot
 
