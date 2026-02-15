@@ -183,7 +183,11 @@ module apimService './core/apim/apim.bicep' = {
   scope: rg
   params:{
     apiManagementName: apiManagementName
+    logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
   }
+  dependsOn: [
+    monitoring
+  ]
 }
 
 // MCP client oauth via APIM gateway

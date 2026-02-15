@@ -49,6 +49,9 @@ param appInsightsId string = ''
 @description('The name of the user-assigned managed identity used as entra app FIC')
 param entraAppUserAssignedIdentityName string = 'entra-app-user-assigned-identity'
 
+@description('The resource ID of the Log Analytics workspace for diagnostic settings')
+param logAnalyticsWorkspaceId string = ''
+
 // ------------------
 //    VARIABLES
 // ------------------
@@ -97,6 +100,27 @@ resource apimLogger 'Microsoft.ApiManagement/service/loggers@2021-12-01-preview'
     isBuffered: false
     loggerType: 'applicationInsights'
     resourceId: appInsightsId
+  }
+}
+
+// Diagnostic settings to send APIM logs and metrics to Log Analytics
+resource apimDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceId)) {
+  name: 'apim-to-loganalytics'
+  scope: apimService
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
   }
 }
 

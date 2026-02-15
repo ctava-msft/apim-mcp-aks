@@ -127,84 +127,43 @@ Azure Monitor collects logs, metrics, and traces from all agents.
 
 ### Query Agent Logs
 
+> **Note:** This accelerator uses the legacy `ContainerLog` table (v1) rather than `ContainerLogV2`. The v1 table uses `LogEntry` instead of `LogMessage`, and container metadata fields (`Name`, `Image`) may be empty when using the AMA agent with the OMS addon.
+
+
 ```kusto
-// Agent container logs
-ContainerLogV2
-| where ContainerName contains "agent"
-| where TimeGenerated > ago(1h)
-| project TimeGenerated, ContainerName, LogMessage
+// Agent container logs (ContainerLog v1)
+ContainerLog
+| where TimeGenerated < ago(60m)
+| where LogEntry !contains "/health"
+| project TimeGenerated, LogEntry, LogEntrySource, ContainerID
 | order by TimeGenerated desc
 | take 100
 ```
 
-### Query API Requests
-
-```kusto
-// APIM request logs
-ApiManagementGatewayLogs
-| where TimeGenerated > ago(1h)
-| where OperationName contains "tools"
-| project TimeGenerated, OperationName, ResponseCode, DurationMs
-| order by TimeGenerated desc
-```
+The logs reflect the runtime behavior of `next_best_action_agent.py` — a FastAPI MCP server that initializes CosmosDB clients for task and plan storage, sets up memory providers (short-term via CosmosDB, long-term via AI Search, and facts via Fabric IQ), generates embeddings for semantic similarity search, analyzes user intent, produces action plans, and optionally leverages Agent Lightning for fine-tuning — along with standard HTTP request handling from the Uvicorn server.
 
 ---
 
-## Step 3.6: Review Metrics and Traces via Azure Monitor and App Insights
+## Step 3.6: Check Entra ID / RBAC
 
-### Navigate to Application Insights
+### Obtain the Agent Managed Identity Client ID
 
-1. Open Azure Portal
-2. Navigate to **Application Insights** → Your instance
-3. Go to **Transaction Search**
+The agent's managed identity client ID is stored as an annotation on the Kubernetes service account used by the agent pods. This is **not** the same as the OAuth app registration (e.g., `MCP-OAuth-app-*`) visible in Entra ID → App registrations — that app is used by APIM for OAuth token validation.
 
-### View Distributed Traces
+Retrieve the managed identity client ID from the service account:
 
-Filter by:
-- **Operation Name:** `POST /message`
-- **Time Range:** Last 1 hour
-
-Click on a transaction to view the end-to-end trace.
-
-### Query Custom Metrics
-
-```kusto
-// Tool call latency
-customMetrics
-| where name == "tool_call_duration_ms"
-| summarize avg(value), percentile(value, 95), percentile(value, 99) by bin(timestamp, 5m)
-| render timechart
+```powershell
+# Get the managed identity client ID from the service account annotation
+kubectl get serviceaccount mcp-agent-sa -n mcp-agents -o jsonpath='{.metadata.annotations.azure\.workload\.identity/client-id}'
 ```
 
-### Query Error Rates
-
-```kusto
-// Error rate by agent
-requests
-| where timestamp > ago(1h)
-| summarize 
-    TotalRequests = count(),
-    FailedRequests = countif(success == false),
-    ErrorRate = round(countif(success == false) * 100.0 / count(), 2)
-  by cloud_RoleName
-| order by ErrorRate desc
-```
-
----
-
-## Step 3.7: Check Entra ID / RBAC
-
-### Navigate to Entra ID
-
-1. Open Azure Portal
-2. Navigate to **Microsoft Entra ID** → **App registrations**
-3. Find your agent's managed identity
+Save the output — you will use it in the commands below.
 
 ### Review Role Assignments
 
 ```powershell
-# List role assignments for agent identity
-az role assignment list --assignee <agent-managed-identity-client-id> --all --output table
+# List role assignments for agent identity (replace with your client ID from above)
+az role assignment list --assignee <managed-identity-client-id> --all --output table
 ```
 
 ### Expected Roles
@@ -220,7 +179,7 @@ az role assignment list --assignee <agent-managed-identity-client-id> --all --ou
 
 ```powershell
 # Check service account annotation
-kubectl get serviceaccount autonomous-agent-sa -n mcp-agents -o yaml
+kubectl get serviceaccount mcp-agent-sa -n mcp-agents -o yaml
 
 # Expected annotation:
 # azure.workload.identity/client-id: <managed-identity-client-id>
@@ -241,7 +200,6 @@ Based on your review, identify any issues with your agents:
 | Long Term Memory (FoundryIQ Instructions) | ✅ / ❌ | | |
 | Facts (Fabric IQ Ontologies) | ✅ / ❌ | | |
 | Log Analytics | ✅ / ❌ | | |
-| App Insights Traces | ✅ / ❌ | | |
 | Entra ID + RBAC | ✅ / ❌ | | |
 
 ### Common Problems
@@ -264,7 +222,6 @@ Before proceeding to Exercise 4, please confirm the following:
 - [ ] Confirmed FoundryIQ (AI Search) has agentic retrieval of instructions
 - [ ] Reviewed ontology files in storage account / Fabric IQ
 - [ ] Queried Log Analytics for agent logs
-- [ ] Viewed distributed traces in App Insights
 - [ ] Verified Entra ID + RBAC role assignments
 - [ ] Documented any problems found
 
