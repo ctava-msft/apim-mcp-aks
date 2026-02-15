@@ -4,7 +4,7 @@
 
 This lab guides you through creating a new AI agent using Azure as the secured, managed and governed control plane and GitHub Copilot - SpecKit to realize your new agent. Using the **SpecKit methodology** for specification-driven development, you will review the project constitution to understand governance principles, then write your agent specification and deploy to Azure Kubernetes Service (AKS) as a new pod.
 
-**Duration**: 5 hours  
+**Duration**: 4 hours  
 **Prerequisites**: Completed environment setup and deployed the base Azure Agents Control Plane infrastructure
 
 ---
@@ -16,8 +16,7 @@ This lab guides you through creating a new AI agent using Azure as the secured, 
 | [Exercise 1: Lab Intro](exercises/exercise_01_lab_intro.md) | 30 min | Review objectives, architecture, validate environment |
 | [Exercise 2: Build Agents](exercises/exercise_02_build_agents.md) | 2 hr | Use GitHub Copilot and SpecKit to specify, create, test, and deploy agents |
 | [Exercise 3: Review Agents Control Plane](exercises/exercise_03_review_agents_control_plane.md) | 30 min | Inspect security, governance, memory, and observability. |
-| [Exercise 4: Fine-Tune Agent](exercises/exercise_04_fine_tune_agent.md) | 1 hr | Use Agent Lightning to fine-tune and correct agent behavior |
-| [Exercise 5: Evaluations](exercises/exercise_05_evaluations.md) | 1 hr | Use evaluation framework to measure intent resolution, tool call accuracy and task adherence |
+| [Exercise 4: Fine-Tune and Evaluate Agent](exercises/exercise_04_fine_tune_agent_evaluations.md) | 1 hr | Evaluate baseline, fine-tune with Agent Lightning, re-evaluate to validate improvement |
 
 ---
 
@@ -50,9 +49,8 @@ Traditional AI agent frameworks and architectures focus on getting something wor
 3. [Exercise 1: Lab Intro](exercises/exercise_01_lab_intro.md)
 4. [Exercise 2: Build Agents](exercises/exercise_02_build_agents.md)
 5. [Exercise 3: Review Agents Control Plane](exercises/exercise_03_review_agents_control_plane.md)
-6. [Exercise 4: Fine-Tune Agent](exercises/exercise_04_fine_tune_agent.md)
-7. [Exercise 5: Evaluations](exercises/exercise_05_evaluations.md)
-8. [Optional Exercises](#optional-exercises)
+6. [Exercise 4: Fine-Tune and Evaluate Agent](exercises/exercise_04_fine_tune_agent_evaluations.md)
+7. [Optional Exercises](#optional-exercises)
 
 ---
 
@@ -84,9 +82,12 @@ By the end of this lab, you will be able to:
 - ✅ Query telemetry with Kusto Query Language (KQL)
 
 ### Fine-Tuning & Evaluation
+- ✅ Establish baseline evaluation scores before fine-tuning
 - ✅ Capture agent episodes for training data collection
 - ✅ Label episodes with rewards (human or automated)
 - ✅ Fine-tune models using Agent Lightning
+- ✅ Re-evaluate after fine-tuning to measure improvement
+- ✅ Apply decision gates (keep, rollback, or retrain) based on eval results
 - ✅ Run structured evaluations measuring intent resolution, tool accuracy, and task adherence
 
 ---
@@ -146,36 +147,21 @@ Inspect security, governance, memory, and observability.
 
 ---
 
-### Exercise 4: Fine-Tune Agent (1 hour)
+### Exercise 4: Fine-Tune and Evaluate Agent (1 hour)
 
-Use Agent Lightning to fine-tune and correct agent behavior.
+Establish baseline evaluations, fine-tune with Agent Lightning, re-evaluate to validate improvement.
 
 **Key Activities:**
-- Enable episode capture
-- Generate and review captured episodes
+- Prepare evaluation dataset and run baseline evaluation
+- Enable episode capture and generate training data
 - Label episodes with rewards (manual or automated)
-- Build fine-tuning dataset
-- Submit fine-tuning job to Azure OpenAI
-- Deploy tuned model
-- Retest and validate improvement
+- Build fine-tuning dataset and submit training job
+- Deploy fine-tuned model
+- Re-run evaluations and compare before/after scores
+- Apply decision gate: keep, rollback, or retrain
+- Set up continuous evaluation in CI/CD
 
-**[Full Exercise →](exercises/exercise_04_fine_tune_agent.md)**
-
----
-
-### Exercise 5: Evaluations (30 minutes)
-
-Use the evaluation framework to measure agent performance and task adherence.
-
-**Key Activities:**
-- Prepare evaluation dataset with test cases
-- Run intent resolution evaluation
-- Run tool call accuracy evaluation
-- Run task adherence evaluation
-- Generate evaluation report
-- Compare scores over time
-
-**[Full Exercise →](exercises/exercise_05_evaluations.md)**
+**[Full Exercise →](exercises/exercise_04_fine_tune_agent_evaluations.md)**
 
 ---
 
