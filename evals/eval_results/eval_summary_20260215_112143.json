@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-15T11:21:43.854354",
+  "thresholds": {
+    "intent_resolution": 3,
+    "tool_call_accuracy": 3,
+    "task_adherence": 3
+  },
+  "summary": {
+    "total_evaluated": 3
+  },
+  "all_passed": null
+}

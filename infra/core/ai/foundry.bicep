@@ -19,6 +19,18 @@ param modelVersion string
 @description('Model capacity')
 param modelCapacity int
 
+@description('Fine-tuning model deployment name')
+param fineTuneModelDeploymentName string = 'gpt-4o-mini'
+
+@description('Fine-tuning model name')
+param fineTuneModelName string = 'gpt-4o-mini'
+
+@description('Fine-tuning model version')
+param fineTuneModelVersion string = '2024-07-18'
+
+@description('Fine-tuning model capacity')
+param fineTuneModelCapacity int = 10
+
 @description('Embedding model deployment name')
 param embeddingModelDeploymentName string = 'text-embedding-3-large'
 
@@ -112,6 +124,29 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
   }
 }
 
+// Deploy gpt-4o-mini model for fine-tuning
+resource fineTuneModelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
+  parent: foundryAccount
+  name: fineTuneModelDeploymentName
+  sku: {
+    name: 'Standard'
+    capacity: fineTuneModelCapacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: fineTuneModelName
+      version: fineTuneModelVersion
+    }
+    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
+    currentCapacity: fineTuneModelCapacity
+    raiPolicyName: 'Microsoft.DefaultV2'
+  }
+  dependsOn: [
+    modelDeployment
+  ]
+}
+
 // Deploy text-embedding-3-large model for semantic similarity
 resource embeddingModelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   parent: foundryAccount
@@ -131,7 +166,7 @@ resource embeddingModelDeployment 'Microsoft.CognitiveServices/accounts/deployme
     raiPolicyName: 'Microsoft.DefaultV2'
   }
   dependsOn: [
-    modelDeployment
+    fineTuneModelDeployment
   ]
 }
 
@@ -183,4 +218,5 @@ output bingConnectionId string = bingConnection.id
 output bingConnectionName string = bingConnection.name
 output bingResourceId string = bingGrounding.id
 output modelDeploymentName string = modelDeployment.name
+output fineTuneModelDeploymentName string = fineTuneModelDeployment.name
 output embeddingModelDeploymentName string = embeddingModelDeployment.name

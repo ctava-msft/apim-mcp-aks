@@ -2311,6 +2311,7 @@ def lightning_start_training_tool(
 def lightning_get_training_status_tool(training_run_id: str, agent_id: str = None) -> str:
     """
     Get the status of a training run.
+    Polls the Azure OpenAI API to sync status, then returns from Cosmos.
     
     Args:
         training_run_id: ID of the training run
@@ -2324,7 +2325,12 @@ def lightning_get_training_status_tool(training_run_id: str, agent_id: str = Non
     
     try:
         agent = agent_id or LIGHTNING_AGENT_ID
-        run = rl_ledger.get_training_run(training_run_id, agent)
+        
+        # Use training_runner.check_status() to poll AOAI API and sync Cosmos
+        if training_runner:
+            run = training_runner.check_status(training_run_id, agent)
+        else:
+            run = rl_ledger.get_training_run(training_run_id, agent)
         
         if not run:
             return json.dumps({"error": f"Training run {training_run_id} not found"})
@@ -4898,7 +4904,12 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                 )
             
             try:
-                run = rl_ledger.get_training_run(training_run_id, agent_id)
+                # Use training_runner.check_status() to poll AOAI API and sync Cosmos
+                if training_runner:
+                    run = training_runner.check_status(training_run_id, agent_id)
+                else:
+                    # Fallback to direct Cosmos read if runner not available
+                    run = rl_ledger.get_training_run(training_run_id, agent_id)
                 
                 if not run:
                     return MCPToolResult(

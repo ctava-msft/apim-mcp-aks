@@ -124,7 +124,7 @@ class TrainingRunner:
             self._client = AzureOpenAI(
                 azure_endpoint=base_endpoint,
                 api_key=token.token,
-                api_version="2024-08-01-preview",  # Fine-tuning API version
+                api_version="2025-04-01-preview",  # Fine-tuning API version (supports GlobalStandard training)
             )
         
         return self._client
@@ -135,12 +135,31 @@ class TrainingRunner:
         return cls(config=TrainingConfig.from_env())
 
     def _upload_file(self, file_path: str, purpose: str = "fine-tune") -> str:
-        """Upload a file to Azure OpenAI and return the file ID."""
+        """Upload a file to Azure OpenAI, wait for processing, and return the file ID."""
         with open(file_path, "rb") as f:
             response = self.client.files.create(file=f, purpose=purpose)
         
-        logger.info(f"Uploaded file: {file_path} -> {response.id}")
-        return response.id
+        file_id = response.id
+        logger.info(f"Uploaded file: {file_path} -> {file_id}, status={response.status}")
+        
+        # Wait for file processing to complete
+        max_wait = 120  # seconds
+        poll_interval = 5
+        elapsed = 0
+        while elapsed < max_wait:
+            file_info = self.client.files.retrieve(file_id)
+            status = file_info.status
+            if status == "processed":
+                logger.info(f"File {file_id} processing complete")
+                return file_id
+            elif status in ("error", "deleting", "deleted"):
+                raise RuntimeError(f"File {file_id} processing failed with status: {status}")
+            logger.info(f"File {file_id} status: {status}, waiting...")
+            time.sleep(poll_interval)
+            elapsed += poll_interval
+        
+        raise RuntimeError(f"File {file_id} processing timed out after {max_wait}s (status: {status})")
+        return file_id
 
     def start_training(
         self,
@@ -173,14 +192,17 @@ class TrainingRunner:
         
         base_model = base_model or self.config.base_model
         
-        # Build hyperparameters
+        # Build hyperparameters (exclude batch_size="auto" — Azure OpenAI rejects string values)
         hp = {
             "n_epochs": self.config.n_epochs,
-            "batch_size": self.config.batch_size,
             "learning_rate_multiplier": self.config.learning_rate_multiplier,
         }
+        if self.config.batch_size != "auto":
+            hp["batch_size"] = int(self.config.batch_size)
         if hyperparameters:
-            hp.update(hyperparameters)
+            # Filter out invalid batch_size
+            clean_hp = {k: v for k, v in hyperparameters.items() if not (k == "batch_size" and v == "auto")}
+            hp.update(clean_hp)
         
         # Create training run record
         run = TrainingRun(
@@ -221,6 +243,9 @@ class TrainingRunner:
             
             if self.config.suffix:
                 job_params["suffix"] = self.config.suffix
+            
+            # Use GlobalStandard training tier for cross-region fine-tuning
+            job_params["extra_body"] = {"trainingType": "GlobalStandard"}
             
             job = self.client.fine_tuning.jobs.create(**job_params)
             

@@ -35,6 +35,12 @@ param foundryModelName string = 'gpt-5.2-chat'
 param foundryModelVersion string = '2025-12-11'
 param foundryModelCapacity int = 10
 
+// Fine-tuning model configuration
+param fineTuneModelDeploymentName string = 'gpt-4o-mini'
+param fineTuneModelName string = 'gpt-4o-mini'
+param fineTuneModelVersion string = '2024-07-18'
+param fineTuneModelCapacity int = 10
+
 // Embeddings model configuration
 param embeddingModelDeploymentName string = 'text-embedding-3-large'
 param embeddingModelName string = 'text-embedding-3-large'
@@ -498,6 +504,10 @@ module foundry './core/ai/foundry.bicep' = {
     modelName: foundryModelName
     modelVersion: foundryModelVersion
     modelCapacity: foundryModelCapacity
+    fineTuneModelDeploymentName: fineTuneModelDeploymentName
+    fineTuneModelName: fineTuneModelName
+    fineTuneModelVersion: fineTuneModelVersion
+    fineTuneModelCapacity: fineTuneModelCapacity
     embeddingModelDeploymentName: embeddingModelDeploymentName
     embeddingModelName: embeddingModelName
     embeddingModelVersion: embeddingModelVersion

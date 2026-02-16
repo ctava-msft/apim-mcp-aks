@@ -120,16 +120,18 @@ Now enable episode capture to collect training data.
 Make several requests to generate episodes for training data.
 
 **Prompt Copilot (Agent Mode) with:**
-> "Set up a kubectl port-forward from the autonomous-agent service in the mcp-agents namespace on port 8080:80. Then read the evaluation dataset at `evals/autonomous_agent_eval.jsonl` to get the list of test queries. For each query in the dataset, send a JSON-RPC request to `http://localhost:8080/message` with method `tools/call`, tool name `analyze_query`, and the query as the argument. Display the response for each query and pause 2 seconds between requests. This will generate episodes that get captured for training data."
+> "Set up a kubectl port-forward from the autonomous-agent service in the mcp-agents namespace on port 8080:80. Then activate the `.venv` virtual environment and run `python scripts/generate_episodes.py` to send each evaluation query from `evals/autonomous_agent_eval.jsonl` to the agent. The script connects to the MCP SSE endpoint at `http://localhost:8080/runtime/webhooks/mcp/sse`, establishes a session, and sends JSON-RPC tool calls for each query with a 2-second pause between requests. Display the output showing how many episodes were generated successfully."
+
+> **Tip:** You can also run `python scripts/generate_episodes.py --list-tools` to see all available tools on the agent before generating episodes.
 
 ---
 
 ## Step 4.5: Review Captured Episodes with Copilot
 
-Query Cosmos DB for captured episodes.
+Query captured episodes via the MCP API.
 
 **Prompt Copilot (Agent Mode) with:**
-> "List the most recent 10 captured episodes for the autonomous-agent. First try using the Lightning CLI: `python -m src.lightning.cli list-episodes --agent-id autonomous-agent --limit 10`. If the CLI is not available, use the Azure CLI to query Cosmos DB: `az cosmosdb sql query --account-name $env:COSMOSDB_ACCOUNT --database-name agents --container-name rl_episodes --query \"SELECT * FROM c WHERE c.agent_id = 'autonomous-agent' ORDER BY c._ts DESC OFFSET 0 LIMIT 10\"`. Display the results and summarize how many episodes were captured."
+> "Set up a kubectl port-forward from the mcp-agents service in the mcp-agents namespace on port 8000:80. Then activate the `.venv` virtual environment and run `python scripts/list_episodes.py --port 8000 --agent-id mcp-agents --limit 10` to list the most recent 10 captured episodes. The script connects to the MCP SSE endpoint and calls the `lightning_list_episodes` tool. Display the results and summarize how many episodes were captured."
 
 ### Episode Structure
 
@@ -161,17 +163,14 @@ Query Cosmos DB for captured episodes.
 
 Review episodes and assign rewards based on quality.
 
-### Manual Labeling
+### Automated Labeling
 
 **Prompt Copilot (Agent Mode) with:**
-> "List all unlabeled episodes for the autonomous-agent using `python -m src.lightning.cli list-episodes --agent-id autonomous-agent --unlabeled-only`. Review the results and for each episode, determine a reward score based on these criteria: 0.9-1.0 for correct tool + complete response, 0.7-0.89 for correct tool + mostly complete, 0.5-0.69 for partially correct, 0.3-0.49 for wrong approach, 0.0-0.29 for failed. Label each episode using `python -m src.lightning.cli label-episode --episode-id <id> --reward <score> --reason '<explanation>'`."
+> "Set up a kubectl port-forward from the mcp-agents service in the mcp-agents namespace on port 8000:80. Then activate the `.venv` virtual environment and run `python scripts/label_episodes.py --port 8000 --agent-id mcp-agents --limit 20` to automatically label captured episodes with rewards. The script connects to the MCP SSE endpoint, lists all episodes via `lightning_list_episodes`, scores each one using quality heuristics (tool correctness, output completeness, error detection), and assigns rewards via `lightning_assign_reward`. Display the output showing the reward distribution summary."
 
-### Automated Labeling with Evaluators
+### Manual Override
 
-Use the task adherence evaluator for batch labeling — this **wires evaluation scores directly into the reward signal**.
-
-**Prompt Copilot (Agent Mode) with:**
-> "Run automated batch labeling on all unlabeled episodes for the autonomous-agent using the task adherence evaluator. Execute: `python -m src.lightning.cli label-batch --agent-id autonomous-agent --auto-label --evaluator task_adherence --min-score 0.7`. Then verify the labeling results by listing labeled episodes: `python -m src.lightning.cli list-episodes --agent-id autonomous-agent --labeled-only --limit 20`. Display the reward distribution summary."
+If you want to override specific episode labels, you can call the `lightning_assign_reward` MCP tool directly for individual episodes.
 
 ### Reward Guidelines
 
@@ -219,36 +218,37 @@ Token Count: 45,230
 Submit a fine-tuning job to Azure OpenAI.
 
 **Prompt Copilot (Agent Mode) with:**
-> "Start a fine-tuning job on Azure OpenAI for the autonomous-agent. Run: `python -m src.lightning.cli start-training --agent-id autonomous-agent --dataset-name autonomous-agent-v1 --base-model gpt-4o-mini --training-epochs 3 --learning-rate-multiplier 0.1`. Note the returned job ID. Then monitor the training progress by running `python -m src.lightning.cli get-training-status --job-id <returned_job_id>` and display the status, progress, training loss, and validation loss."
+> "Start a fine-tuning job on Azure OpenAI for the mcp-agents agent using the `lightning_start_training` MCP tool. Use the latest dataset built in Step 4.7, base model `gpt-4o-mini`, 3 epochs, and learning rate multiplier 1.0. Note the returned training run ID and AOAI job ID."
 
 ### Monitor Training Progress
 
+After starting the job, monitor it using the monitoring script. This polls the Azure OpenAI API directly (via MCP) and updates the Cosmos DB record in real-time.
+
 **Prompt Copilot (Agent Mode) with:**
-> "Check the training status for the fine-tuning job by running `python -m src.lightning.cli get-training-status --job-id <job_id>`. Report the current status, progress percentage, and training/validation loss."
+> "Ensure kubectl port-forward is active on port 8000 to mcp-agents. Then activate .venv and run: `python scripts/monitor_training.py --training-run-id <training_run_id> --port 8000 --interval 30`. This will poll the AOAI API until the job completes or fails."
 
 Expected output during training:
 
 ```
-Job ID: ftjob-abc123xyz
-Status: running
-Progress: 45%
-Current Epoch: 2/3
-Training Loss: 0.412
-Validation Loss: 0.438
-Estimated Time Remaining: 12 minutes
+Monitoring training run: b0a935c0-f6d4-4e97-855e-a9b50dde2c8c
+MCP endpoint: http://localhost:8000/runtime/webhooks/mcp
+Poll interval: 30s | Timeout: 120m
+------------------------------------------------------------
+[13:15:23] Status: running | AOAI: ftjob-50b46088abde49e5869181f7a47b782b
+[13:15:53] Status: running | AOAI: ftjob-50b46088abde49e5869181f7a47b782b
+...
+[13:52:38] Status: succeeded | AOAI: ftjob-50b46088abde49e5869181f7a47b782b | Metrics: training_loss=0.066 | trained_tokens=11367
+------------------------------------------------------------
+Training SUCCEEDED!
+Fine-tuned model: gpt-4o-mini-2024-07-18.ft-50b46088abde49e5869181f7a47b782b
+
+Next step: Deploy the model with:
+  python scripts/deploy_finetuned_model.py \
+    --training-run-id b0a935c0-f6d4-4e97-855e-a9b50dde2c8c \
+    --port 8000
 ```
 
-Wait for training to complete (typically 15-30 minutes):
-
-```
-Job ID: ftjob-abc123xyz
-Status: succeeded
-Fine-tuned Model: ft:gpt-4o-mini:autonomous-agent:abc123
-Training Loss: 0.318
-Validation Loss: 0.342
-Total Tokens: 45,230
-Duration: 23 minutes
-```
+> **Important**: The `lightning_get_training_status` MCP tool polls the Azure OpenAI API on each call, syncing the real-time status back to Cosmos DB. This ensures the Cosmos record stays current with the actual AOAI job status.
 
 ### Interpreting Training Metrics
 
@@ -265,8 +265,39 @@ Duration: 23 minutes
 
 ### Promote and Deploy the Model
 
+Use the deployment script to promote the model in Cosmos and update the AKS deployment in one step.
+
 **Prompt Copilot (Agent Mode) with:**
-> "Promote and deploy the fine-tuned model for the autonomous-agent. First, promote it using: `python -m src.lightning.cli promote-model --agent-id autonomous-agent --model-name ft:gpt-4o-mini:autonomous-agent:<model_suffix> --mark-active`. Then update the AKS deployment to use the fine-tuned model by setting `USE_TUNED_MODEL=true` and `TUNED_MODEL_NAME=ft:gpt-4o-mini:autonomous-agent:<model_suffix>` on the autonomous-agent deployment in the mcp-agents namespace. Restart the deployment and wait for the rollout to complete. Verify the pods are running with the new environment variables."
+> "Ensure kubectl port-forward is active on port 8000 to mcp-agents. Then activate .venv and run: `python scripts/deploy_finetuned_model.py --training-run-id <training_run_id> --port 8000 --deployment mcp-agents`. This will: (1) verify the training succeeded, (2) promote the model via MCP, (3) set USE_TUNED_MODEL=true and TUNED_MODEL_NAME on the K8s deployment, and (4) wait for rollout."
+
+Expected output:
+
+```
+============================================================
+Step 1: Checking training run status...
+  Status: succeeded
+  Model:  gpt-4o-mini-2024-07-18.ft-50b46088abde49e5869181f7a47b782b
+  Metrics: {"training_loss": 0.066, "trained_tokens": 11367}
+
+============================================================
+Step 2: Promoting fine-tuned model...
+  Deployment ID: 16b85e61-82e6-4cae-9df7-14c4e449b030
+  Is Active: True
+  Promoted At: 2026-02-16T00:06:22.464282
+
+============================================================
+Step 3: Updating AKS deployment 'mcp-agents'...
+  Set USE_TUNED_MODEL=true
+  Set TUNED_MODEL_NAME=gpt-4o-mini-2024-07-18.ft-50b46088abde49e5869181f7a47b782b
+  Waiting for rollout...
+  Rollout complete!
+  Verified env vars:
+    USE_TUNED_MODEL=true
+    TUNED_MODEL_NAME=gpt-4o-mini-2024-07-18.ft-50b46088abde49e5869181f7a47b782b
+
+============================================================
+Deployment complete!
+```
 
 ---
 
@@ -308,7 +339,7 @@ Evaluation Comparison: baseline → v1.0-finetuned
 
 ---
 
-## Step 4.11: Decision Gate — Did It Actually Improve?
+## Step 4.11: Decision Gate — Did Fine Tuning Improve the performance of the Agent?
 
 This is the most important step. Based on your evaluation comparison, take one of three actions:
 
@@ -342,20 +373,7 @@ If scores didn't meaningfully change, the issue is usually one of:
 
 ---
 
-## Step 4.12: Validate in App Insights with Copilot
-
-Query Application Insights to validate improvements at the infrastructure level.
-
-**Prompt Copilot (Agent Mode) with:**
-> "Query Application Insights to compare error rates before and after fine-tuning. Use the Azure CLI or the Application Insights REST API to run the following KQL query against the App Insights resource associated with this deployment:
-> ```
-> requests | where timestamp > ago(24h) | extend model_version = tostring(customDimensions['model_version']) | summarize TotalRequests = count(), ErrorRate = round(countif(success == false) * 100.0 / count(), 2), AvgDuration = round(avg(duration), 0) by model_version, bin(timestamp, 1h) | order by timestamp desc
-> ```
-> Display the results showing error rates by model version."
-
----
-
-## Step 4.13: Store Evaluation Results and Set Up Continuous Evaluation with Copilot
+## Step 4.12: Store Evaluation Results with Copilot
 
 ### Store Results for Tracking
 
@@ -372,16 +390,9 @@ AND c.agent_id = 'autonomous-agent'
 ORDER BY c.timestamp DESC
 ```
 
-### Set Up Continuous Evaluation in CI/CD
-
-Automate evaluations so that every deployment is gated on eval scores.
-
-**Prompt Copilot (Agent Mode) with:**
-> "Create a GitHub Actions workflow file at `.github/workflows/evaluate-agent.yml` that runs the agent evaluation on every push to main and on a daily schedule (midnight UTC). The workflow should: (1) check out the repo, (2) run `python -m evals.evaluate_next_best_action --data evals/next_best_action_eval_data.jsonl --out evals/eval_results --direct --strict`, (3) check if the eval_summary JSON has `all_passed: true` — if not, fail the build with exit code 1, and (4) upload the eval_results directory as a GitHub Actions artifact. Use `actions/checkout@v4` and `actions/upload-artifact@v4`."
-
 ---
 
-## Verification Checklist
+## Completion Checklist
 
 - [ ] Evaluation dataset created with test cases
 - [ ] **Baseline evaluation** run on base model (scores recorded)
@@ -457,10 +468,10 @@ Your agents now benefit from:
 
 ## Next Steps
 
-- Explore the [Optional Exercises](../LAB_MANUAL_BUILD_YOUR_OWN_AGENT.md#optional-exercises) for advanced topics
 - Review [AGENTS_ARCHITECTURE.md](../AGENTS_ARCHITECTURE.md) for deeper architectural understanding
 - Check [AGENTS_EVALUATIONS.md](../AGENTS_EVALUATIONS.md) for advanced evaluation techniques
 - See [AGENTS_IDENTITY_DESIGN.md](../AGENTS_IDENTITY_DESIGN.md) for security deep-dive
+- Explore the [Optional Exercises](../LAB_MANUAL_BUILD_YOUR_OWN_AGENT.md#optional-exercises) for advanced topics
 - Implement custom evaluators for domain-specific metrics
 - Set up alerting for evaluation score regression
 - Add more edge-case test queries to the evaluation dataset

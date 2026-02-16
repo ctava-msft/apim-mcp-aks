@@ -361,6 +361,100 @@ async def run_batch_evaluation(
     return {"error": "No content in response"}
 
 
+async def run_sequential_evaluation(
+    base_url: str,
+    token: str,
+    evaluation_data: List[Dict[str, Any]],
+    thresholds: Optional[Dict[str, int]] = None
+) -> Dict[str, Any]:
+    """Evaluate items one at a time, each with a fresh SSE session.
+
+    This avoids SSE timeout issues that occur when a batch evaluation
+    takes longer than the SSE connection lifetime (~2 minutes).
+    """
+    per_item_results = []
+    total = len(evaluation_data)
+    intent_scores = []
+    tool_scores = []
+    task_flags = []
+
+    for i, item in enumerate(evaluation_data, 1):
+        print(f"\n{'─' * 50}")
+        print(f"[{i}/{total}] Evaluating: {item.get('query', '')[:60]}...")
+
+        # Wait between items to avoid rate limits and let the pod recover
+        if i > 1:
+            wait_secs = 15
+            print(f"   Waiting {wait_secs}s between evaluations (rate-limit cooldown)...")
+            await asyncio.sleep(wait_secs)
+
+        # Fresh SSE session for each item
+        async with MCPClient(base_url, token) as client:
+            if not await client.establish_sse_session():
+                per_item_results.append({"error": "SSE session failed", "query": item.get("query", "")})
+                continue
+            await asyncio.sleep(1)
+
+            result = await run_single_evaluation(
+                client=client,
+                query=item.get("query", ""),
+                response=item.get("response", ""),
+                tool_calls=item.get("tool_calls"),
+                system_message=item.get("system_message"),
+                thresholds=thresholds,
+            )
+
+        if "error" in result:
+            print(f"   [FAIL] {result['error']}")
+            per_item_results.append(result)
+            continue
+
+        per_item_results.append(result)
+
+        # Collect scores for summary — results may nest under "evaluations"
+        evals = result.get("evaluations", result)
+        intent = evals.get("intent_resolution", {}).get("score")
+        tool = evals.get("tool_call_accuracy", {}).get("score")
+        task = evals.get("task_adherence", {}).get("flagged")
+
+        if intent is not None:
+            intent_scores.append(float(intent))
+            print(f"   Intent: {intent}/5", end="")
+        if tool is not None:
+            tool_scores.append(float(tool))
+            print(f"  Tool: {tool}/5", end="")
+        if task is not None:
+            task_flags.append(task)
+            print(f"  Task: {'flagged' if task else 'pass'}", end="")
+        print()
+
+    # Build aggregated summary matching batch format
+    avg_intent = round(sum(intent_scores) / len(intent_scores), 2) if intent_scores else 0
+    avg_tool = round(sum(tool_scores) / len(tool_scores), 2) if tool_scores else 0
+    flagged_count = sum(1 for f in task_flags if f)
+
+    all_passed = True
+    if thresholds:
+        if avg_intent < thresholds.get("intent_resolution", 0):
+            all_passed = False
+        if avg_tool < thresholds.get("tool_call_accuracy", 0):
+            all_passed = False
+        if flagged_count > 0:
+            all_passed = False
+
+    return {
+        "mode": "sequential",
+        "summary": {
+            "total_evaluated": total,
+            "avg_intent_resolution": avg_intent,
+            "avg_tool_call_accuracy": avg_tool,
+            "task_adherence_flagged": flagged_count,
+            "all_passed": all_passed,
+        },
+        "per_item_results": per_item_results,
+    }
+
+
 async def run_agent_and_evaluate(
     client: MCPClient,
     query: str,
@@ -674,6 +768,11 @@ Examples:
         help="Exit with code 1 if any threshold is not met"
     )
     parser.add_argument(
+        "--sequential",
+        action="store_true",
+        help="Evaluate items one at a time with fresh SSE sessions (avoids SSE timeout on large batches)"
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging"
@@ -727,6 +826,48 @@ async def main_async(args: argparse.Namespace) -> int:
     # Create output directory
     output_dir = Path(args.out)
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Sequential mode bypasses the long-lived SSE session
+    if args.sequential and args.data:
+        print(f"\n[FILE] Loading dataset from: {args.data}")
+        dataset = load_jsonl_data(args.data)
+        print(f"   Loaded {len(dataset)} evaluation items")
+        
+        eval_data = []
+        for row in dataset:
+            eval_data.append({
+                "query": row.get("query", ""),
+                "response": row.get("response", ""),
+                "tool_calls": row.get("tool_calls", []),
+                "system_message": row.get("system_message", "")
+            })
+        
+        # Build thresholds dict
+        thresholds_dict = {
+            "intent_resolution": thresholds.get("intent_resolution", 3),
+            "tool_call_accuracy": thresholds.get("tool_call_accuracy", 3),
+            "task_adherence": thresholds.get("task_adherence", 3),
+        }
+        
+        print(f"\n[NOTE] Sequential mode: evaluating {len(eval_data)} items one at a time")
+        results = await run_sequential_evaluation(base_url, token, eval_data, thresholds_dict)
+        
+        if results and "error" in results:
+            logger.error(f"Evaluation failed: {results['error']}")
+            return 1
+        
+        if results:
+            saved_files = save_results(results, output_dir, thresholds)
+            all_passed = print_summary_report(results, thresholds, args.strict)
+            
+            print(f"Results saved to:")
+            for name, path in saved_files.items():
+                print(f"  {name}: {path}")
+            
+            if args.strict and not all_passed:
+                return 1
+        
+        return 0
     
     # Connect to MCP server
     async with MCPClient(base_url, token) as client:

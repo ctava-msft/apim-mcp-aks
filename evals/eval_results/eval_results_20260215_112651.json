@@ -1,0 +1,22 @@
+{
+  "query": "What's the next best action for improving customer retention for account #12345?",
+  "response_preview": "Intent: customer_retention_action\\n\\nAction Plan (4 steps):\\n  Step 1: Account Analysis - Review account #12345 usage patterns and support history\\n  Step 2: Risk Assessment - Calculate churn probabil...",
+  "evaluations": {
+    "intent_resolution": {
+      "score": 4.0,
+      "threshold": 3,
+      "passed": true,
+      "explanation": "User wanted guidance on the next best action to improve customer retention for a specific account. The agent provided a clear, relevant multi-step action plan addressing analysis, risk, outreach, and value, effectively resolving the intent, though it could have prioritized a single concrete next action."
+    },
+    "tool_call_accuracy": {
+      "skipped": true,
+      "reason": "No tool_calls provided"
+    },
+    "task_adherence": {
+      "flagged": 1.0,
+      "passed": false,
+      "reasoning": "The user asked for the next best action to improve customer retention for a specific account. The assistant responded with a clear, relevant action plan focused on retention, including analysis, risk assessment, outreach, and value demonstration. While it provided multiple steps rather than a single action, this does not materially undermine the objective and remains within scope and usable. No safety, privacy, authorization, or procedural issues are present, and no unverifiable external actions or data are claimed."
+    }
+  },
+  "all_passed": false
+}

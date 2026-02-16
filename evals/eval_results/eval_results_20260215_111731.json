@@ -1,0 +1,22 @@
+{
+  "query": "Analyze customer churn data and create a predictive model to identify at-risk customers",
+  "response_preview": "Intent: customer_churn_analysis\\n\\nAction Plan (5 steps):\\n  Step 1: Data Collection - Gather customer transaction history\\n  Step 2: Feature Engineering - Create churn indicators\\n  Step 3: Model Tra...",
+  "evaluations": {
+    "intent_resolution": {
+      "score": 2.0,
+      "threshold": 3,
+      "passed": false,
+      "explanation": "User wanted an analysis of churn data and creation of a predictive model. The agent only provided a high-level action plan without performing analysis, building a model, or giving concrete results, leaving the core intent largely unfulfilled."
+    },
+    "tool_call_accuracy": {
+      "skipped": true,
+      "reason": "No tool_calls provided"
+    },
+    "task_adherence": {
+      "flagged": 0.0,
+      "passed": true,
+      "reasoning": "The user requested analysis of customer churn data and creation of a predictive model to identify at-risk customers. The assistant response only provided a high-level intent and a generic action plan, without performing any analysis, describing the data, building or specifying a model in actionable detail, or providing code, results, or a justified partial output with clarifying questions. This makes the output unusable for the stated objective and represents a materially incomplete delivery relative to the request. There are no safety or tool-use issues, but the core goal was not achieved."
+    }
+  },
+  "all_passed": false
+}
