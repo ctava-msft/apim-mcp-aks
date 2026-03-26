@@ -10,33 +10,39 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.txt .
+COPY src/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code (bust cache: 20260223)
-COPY next_best_action_agent.py .
+# Copy application code
+COPY src/autonomous_agent.py .
 
 # Copy memory module
-COPY memory/ ./memory/
+COPY src/memory/ ./memory/
 
 # Copy lightning module (Agent Lightning RLHF)
-COPY lightning/ ./lightning/
+COPY src/lightning/ ./lightning/
+
+# Copy task instructions for policy knowledge base
+COPY task_instructions/ ./task_instructions/
+
+# Copy ingestion script
+COPY scripts/ingest_prior_auth_policies.py ./scripts/
 
 # Create non-root user
-RUN useradd -m -u 1000 mcpuser && \
-    chown -R mcpuser:mcpuser /app
+RUN useradd -m -u 1000 umagent && \
+    chown -R umagent:umagent /app
 
 # Switch to non-root user
-USER mcpuser
+USER umagent
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # Run the application
-CMD ["uvicorn", "next_best_action_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "autonomous_agent:app", "--host", "0.0.0.0", "--port", "8001"]

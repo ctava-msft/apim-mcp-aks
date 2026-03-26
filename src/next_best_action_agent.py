@@ -203,6 +203,11 @@ FOUNDRY_MODEL_DEPLOYMENT_NAME = os.getenv("FOUNDRY_MODEL_DEPLOYMENT_NAME", "gpt-
 EVALUATOR_MODEL_DEPLOYMENT_NAME = os.getenv("EVALUATOR_MODEL_DEPLOYMENT_NAME", "gpt-5.2-chat")
 EMBEDDING_MODEL_DEPLOYMENT_NAME = os.getenv("EMBEDDING_MODEL_DEPLOYMENT_NAME", "text-embedding-3-large")
 
+# Agent Task Metering configuration (billing / adherence evaluation)
+METERING_SERVICE_URL = os.getenv("METERING_SERVICE_URL", "http://agent-task-metering.mcp-agents.svc.cluster.local")
+METERING_ENABLED = os.getenv("METERING_ENABLED", "true").lower() == "true"
+METERING_SUBSCRIPTION_REF = os.getenv("METERING_SUBSCRIPTION_REF", "sub-mcp-agents-001")
+
 # Agent Lightning configuration for fine-tuning and behavior optimization
 LIGHTNING_AGENT_ID = os.getenv("LIGHTNING_AGENT_ID", "mcp-agents")
 ENABLE_LIGHTNING_CAPTURE = os.getenv("ENABLE_LIGHTNING_CAPTURE", "false").lower() == "true"
@@ -1048,6 +1053,74 @@ def ask_foundry_tool(question: str) -> str:
         return f"Error calling Foundry model: {str(e)}"
 
 
+import urllib.request
+import urllib.error
+
+
+def call_metering_service(task_id: str, agent_id: str, task: str, intent: str,
+                        plan_steps: list, success: bool) -> Optional[Dict[str, Any]]:
+    """
+    Call the agent-task-metering service to evaluate intent handling,
+    task adherence, and record billable task completions.
+    
+    Uses the /evaluate_and_meter_task endpoint (recommended single-call flow).
+    """
+    if not METERING_ENABLED:
+        logger.info("Task metering is disabled")
+        return None
+    
+    try:
+        url = f"{METERING_SERVICE_URL}/evaluate_and_meter_task"
+        
+        # Build evidence payload for the metering contract
+        evidence = {
+            "outputs": {
+                "terminal_success": success,
+                "status": "completed" if success else "failed",
+                "intent": intent,
+                "plan_steps_count": len(plan_steps),
+                "result": f"Generated {len(plan_steps)}-step plan for: {task[:100]}",
+            },
+            "query": task,
+            "response": json.dumps({
+                "intent": intent,
+                "plan_steps": len(plan_steps),
+                "task_id": task_id,
+            }),
+        }
+        
+        payload = json.dumps({
+            "task_id": task_id,
+            "agent_id": agent_id,
+            "subscription_ref": METERING_SUBSCRIPTION_REF,
+            "evidence": evidence,
+        }).encode("utf-8")
+        
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            logger.info(
+                f"Metering result: intent_handled={result.get('intent_handled')}, "
+                f"adhered={result.get('adhered')}, "
+                f"billable_units={result.get('billable_units')}, "
+                f"correlation_id={result.get('correlation_id', 'N/A')[:12]}..."
+            )
+            return result
+    
+    except urllib.error.URLError as e:
+        logger.warning(f"Metering service unreachable: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error calling metering service: {e}")
+        return None
+
+
 @ai_function
 def next_best_action_tool(task: str) -> str:
     """
@@ -1293,6 +1366,23 @@ def next_best_action_tool(task: str) -> str:
         }
         cosmos_plans_container.upsert_item(plan_doc)
         logger.info(f"Plan stored in CosmosDB for task: {task_id}")
+
+        # Step 9: Call agent-task-metering service for intent handling & task adherence
+        metering_result = None
+        if METERING_ENABLED:
+            logger.info("Calling agent-task-metering service for billing evaluation...")
+            metering_result = call_metering_service(
+                task_id=task_id,
+                agent_id=LIGHTNING_AGENT_ID,
+                task=task,
+                intent=intent,
+                plan_steps=plan_steps,
+                success=True,
+            )
+            if metering_result:
+                logger.info(f"Task metering complete: billable_units={metering_result.get('billable_units', 0)}")
+            else:
+                logger.warning("Task metering returned no result")
         
         # Build response
         response = {
@@ -1346,7 +1436,8 @@ def next_best_action_tool(task: str) -> str:
                 'long_term_memory_used': len(task_instructions) > 0,
                 'facts_memory_used': len(domain_facts) > 0,
                 'agents_approval_required': agents_approval_required,
-                'approval_result': approval_result
+                'approval_result': approval_result,
+                'metering': metering_result if metering_result else {'enabled': METERING_ENABLED, 'status': 'unavailable'}
             }
         }
         
@@ -3978,7 +4069,24 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                 }
                 cosmos_plans_container.upsert_item(plan_doc)
                 logger.info(f"Plan stored in CosmosDB for task: {task_id}")
-                
+
+                # Step 9: Call agent-task-metering service for intent handling & task adherence
+                metering_result = None
+                if METERING_ENABLED:
+                    logger.info("Calling agent-task-metering service for billing evaluation...")
+                    metering_result = call_metering_service(
+                        task_id=task_id,
+                        agent_id=LIGHTNING_AGENT_ID,
+                        task=task,
+                        intent=intent,
+                        plan_steps=plan_steps,
+                        success=True,
+                    )
+                    if metering_result:
+                        logger.info(f"Task metering complete: billable_units={metering_result.get('billable_units', 0)}")
+                    else:
+                        logger.warning("Task metering returned no result")
+
                 # Build response
                 response = {
                     'task_id': task_id,
@@ -4015,6 +4123,7 @@ async def _execute_tool_impl(tool_name: str, arguments: Dict[str, Any]) -> MCPTo
                         'stored_in_cosmos': True,
                         'long_term_memory_used': len(task_instructions) > 0,
                         'facts_memory_used': len(domain_facts) > 0,
+                        'metering': metering_result if metering_result else {'enabled': METERING_ENABLED, 'status': 'unavailable'}
                     }
                 }
                 

@@ -224,20 +224,41 @@ def print_task_result(result: Dict[str, Any]) -> bool:
         # Plan
         plan = data.get('plan', {})
         steps = plan.get('steps', [])
-        total_steps = plan.get('total_steps', len(steps))
         
-        print(f"\n📊 Generated Plan ({total_steps} steps):")
-        print("-" * 40)
-        
-        for step in steps:
-            step_num = step.get('step', '?')
-            action = step.get('action', 'Unknown')
-            description = step.get('description', 'No description')
-            effort = step.get('estimated_effort', 'N/A')
+        # Handle case where steps is a dict (model returned JSON object instead of array)
+        if isinstance(steps, dict):
+            # Display the structured response
+            total_steps = len(steps.get('actions_taken', steps.get('recommendations', [])))
+            print(f"\n📊 Generated Plan ({total_steps} actions):")
+            print("-" * 40)
+            if 'status' in steps:
+                print(f"\n   Status: {steps['status']}")
+            for key in ['actions_taken', 'recommendations']:
+                items = steps.get(key, [])
+                if items:
+                    print(f"\n   {key.replace('_', ' ').title()}:")
+                    for j, item in enumerate(items, 1):
+                        text = str(item)[:120]
+                        print(f"   {j}. {text}")
+        else:
+            total_steps = plan.get('total_steps', len(steps) if isinstance(steps, list) else 0)
+            print(f"\n📊 Generated Plan ({total_steps} steps):")
+            print("-" * 40)
             
-            print(f"\n   Step {step_num}: {action}")
-            print(f"   Description: {description[:100]}...")
-            print(f"   Effort: {effort}")
+            for i, step in enumerate(steps, 1):
+                if isinstance(step, dict):
+                    step_num = step.get('step', i)
+                    action = step.get('action', 'Unknown')
+                    description = step.get('description', 'No description')
+                    effort = step.get('estimated_effort', 'N/A')
+                    
+                    print(f"\n   Step {step_num}: {action}")
+                    print(f"   Description: {description[:100]}...")
+                    print(f"   Effort: {effort}")
+                elif isinstance(step, str):
+                    print(f"\n   Step {i}: {step[:120]}...")
+                else:
+                    print(f"\n   Step {i}: {str(step)[:120]}...")
         
         # Metadata
         metadata = data.get('metadata', {})

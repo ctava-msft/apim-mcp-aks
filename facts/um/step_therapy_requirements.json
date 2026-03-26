@@ -1,0 +1,99 @@
+{
+  "document": {
+    "name": "Step Therapy Requirements – Biologic Therapy for Severe Asthma",
+    "document_id": "UM-STR-001",
+    "version": "2.0",
+    "effective_date": "2025-01-01",
+    "review_cycle": "Annual",
+    "status": "Active",
+    "line_of_business": "Medicare Advantage",
+    "related_policy": "MA-ASTHMA-BIOLOGIC-001"
+  },
+  "step_therapy": {
+    "description": "Step therapy is required prior to approval of biologic therapy unless an exception applies.",
+    "required": true,
+    "steps": [
+      {
+        "step_number": 1,
+        "description": "Trial of high-dose inhaled corticosteroids",
+        "minimum_trial_duration_days": 90,
+        "drug_classes": ["Inhaled Corticosteroid (ICS)"],
+        "dose_requirement": "high-dose per NAEPP guidelines",
+        "examples": [
+          {"drug": "Fluticasone propionate", "high_dose": "≥500 mcg/day"},
+          {"drug": "Budesonide", "high_dose": "≥800 mcg/day"},
+          {"drug": "Mometasone furoate", "high_dose": "≥400 mcg/day"},
+          {"drug": "Beclomethasone dipropionate", "high_dose": "≥320 mcg/day"}
+        ],
+        "documentation_required": "Prescription records, pharmacy claims, or chart notes confirming dose and duration"
+      },
+      {
+        "step_number": 2,
+        "description": "Trial of at least one additional controller medication",
+        "minimum_trial_duration_days": 90,
+        "drug_classes": [
+          "Long-Acting Beta-Agonist (LABA)",
+          "Leukotriene Receptor Antagonist (LTRA)",
+          "Long-Acting Muscarinic Antagonist (LAMA)"
+        ],
+        "examples": [
+          {"class": "LABA", "drugs": ["Salmeterol", "Formoterol", "Vilanterol"]},
+          {"class": "LTRA", "drugs": ["Montelukast", "Zafirlukast"]},
+          {"class": "LAMA", "drugs": ["Tiotropium (Spiriva Respimat)"]}
+        ],
+        "documentation_required": "Prescription records showing trial of at least one additional controller"
+      }
+    ],
+    "combination_therapy_note": "ICS/LABA combination inhalers (e.g., Advair, Symbicort, Breo) satisfy both Step 1 and Step 2 simultaneously if used at high-dose ICS equivalent for ≥90 days."
+  },
+  "failure_criteria": {
+    "description": "Step therapy is considered failed when any of the following occur despite adequate trial duration at appropriate doses.",
+    "indicators": [
+      {
+        "indicator_id": "FC-1",
+        "description": "≥2 asthma exacerbations requiring systemic corticosteroids within the trial period"
+      },
+      {
+        "indicator_id": "FC-2",
+        "description": "≥1 hospitalization or emergency department visit for asthma during the trial period"
+      },
+      {
+        "indicator_id": "FC-3",
+        "description": "Persistent uncontrolled symptoms as measured by validated instrument (ACT score <20 or ACQ score >1.5)"
+      },
+      {
+        "indicator_id": "FC-4",
+        "description": "Requirement for daily or near-daily rescue inhaler use (>2 days/week)"
+      }
+    ]
+  },
+  "phenotype_guidance": {
+    "description": "Biologic selection should be guided by asthma phenotype when step therapy has been completed.",
+    "phenotype_to_biologic_mapping": [
+      {
+        "phenotype": "Allergic (elevated IgE)",
+        "biomarker": "Total serum IgE 30-1500 IU/mL",
+        "first_line_biologic": "Omalizumab (Xolair)",
+        "alternative": "Dupilumab (Dupixent)"
+      },
+      {
+        "phenotype": "Eosinophilic (elevated eosinophils)",
+        "biomarker": "Blood eosinophils ≥150 cells/µL at initiation or ≥300 cells/µL in prior 12 months",
+        "first_line_biologic": "Mepolizumab (Nucala) or Benralizumab (Fasenra)",
+        "alternative": "Dupilumab (Dupixent)"
+      },
+      {
+        "phenotype": "Oral corticosteroid-dependent",
+        "biomarker": "Maintenance OCS for ≥3 months",
+        "first_line_biologic": "Dupilumab (Dupixent) or Benralizumab (Fasenra)",
+        "alternative": "Mepolizumab (Nucala)"
+      },
+      {
+        "phenotype": "No phenotype limitation (broad eligibility)",
+        "biomarker": "No biomarker required",
+        "first_line_biologic": "Tezepelumab (Tezspire)",
+        "alternative": "N/A"
+      }
+    ]
+  }
+}

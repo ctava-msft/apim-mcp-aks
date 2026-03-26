@@ -1,0 +1,84 @@
+# =========================================
+# Agent Task Metering Service Deployment
+# =========================================
+# Provides task intent handling, task adherence evaluation,
+# and billing/metering capabilities for AI agent workloads.
+# REST API endpoints:
+#   POST /evaluate                 - Full evaluation (intent + adherence)
+#   POST /evaluate_intent_handling - Intent resolution gate only
+#   POST /evaluate_task_adherence  - Task adherence gates only
+#   POST /record_task_completed    - Record a billable task completion
+#   POST /evaluate_and_meter_task  - Evaluate + meter in one call (recommended)
+#   GET  /audit/<correlation_id>   - Retrieve audit record
+#   GET  /health                   - Liveness probe
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-task-metering
+  namespace: mcp-agents
+  labels:
+    app: agent-task-metering
+    component: metering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-task-metering
+  template:
+    metadata:
+      labels:
+        app: agent-task-metering
+        component: metering
+    spec:
+      containers:
+      - name: agent-task-metering
+        image: ${CONTAINER_REGISTRY}/agent-task-metering:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-task-metering
+  namespace: mcp-agents
+  labels:
+    app: agent-task-metering
+    component: metering
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: agent-task-metering

@@ -30,13 +30,16 @@ param disableLocalAuth bool = true
 
 // Foundry AI configuration
 param foundryName string = ''
-param foundryModelDeploymentName string = 'gpt-4o-mini'
-param foundryModelName string = 'gpt-4o-mini'
-param foundryModelVersion string = '2024-07-18'
-param foundryModelCapacity int = 10
+param foundryModelDeploymentName string = 'gpt-5'
+param foundryModelName string = 'gpt-5'
+param foundryModelVersion string = '2025-08-07'
+param foundryModelCapacity int = 1000
+
+// KB model name (Azure AI Search enum value, may differ from ARM model name)
+param kbModelName string = 'gpt-5'
 
 // Fine-tuning model configuration
-param fineTuneModelDeploymentName string = 'gpt-4o-mini'
+param fineTuneModelDeploymentName string = 'gpt-4o-mini-ft'
 param fineTuneModelName string = 'gpt-4o-mini'
 param fineTuneModelVersion string = '2024-07-18'
 param fineTuneModelCapacity int = 10
@@ -54,6 +57,11 @@ param cosmosDatabaseName string = 'mcpdb'
 // Azure AI Search configuration
 param searchServiceName string = ''
 param searchIndexName string = 'task-instructions'
+param priorAuthIndexName string = 'prior-authorization'
+param priorAuthKsSearchIndexName string = 'utilization-management-guidance'
+param priorAuthKsWebName string = 'cms-pa-rule'
+param priorAuthKsBlobName string = 'utilization-management-facts'
+param priorAuthKnowledgeBaseName string = 'prior-authorization-kb'
 
 // Ontology storage container (used when Fabric is disabled)
 var ontologyContainerName = 'ontologies'
@@ -811,6 +819,63 @@ module searchServiceRoleAssignmentMcp './core/search/search-role-assignment.bice
 }
 
 // =========================================
+// AI Search Index: Prior Authorization Knowledge Base
+// =========================================
+
+// RBAC: Cognitive Services OpenAI User for AI Search system identity
+// Required for agentic retrieval (KB model reasoning)
+module foundryRoleAssignmentSearchService './app/foundry-RoleAssignment.bicep' = {
+  name: 'foundryRoleAssignmentSearchService'
+  scope: rg
+  params: {
+    foundryAccountName: foundry.outputs.foundryAccountName
+    roleDefinitionID: CognitiveServicesOpenAIUser
+    principalID: searchService.outputs.principalId
+  }
+}
+
+// RBAC: Storage Blob Data Reader for AI Search system identity
+// Required for azureBlob knowledge source (utilization-management-facts)
+var StorageBlobDataReader = '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+module blobRoleAssignmentSearchService 'app/storage-Access.bicep' = {
+  name: 'blobRoleAssignmentSearchService'
+  scope: rg
+  params: {
+    storageAccountName: storage.outputs.name
+    roleDefinitionID: StorageBlobDataReader
+    principalID: searchService.outputs.principalId
+    nameSuffix: 'search-blob-reader'
+  }
+}
+
+module priorAuthSearchIndex './core/search/search-index.bicep' = {
+  name: 'priorAuthSearchIndex'
+  scope: rg
+  params: {
+    searchServiceName: searchService.outputs.name
+    location: location
+    tags: tags
+    indexName: priorAuthIndexName
+    ksSearchIndexName: priorAuthKsSearchIndexName
+    ksWebName: priorAuthKsWebName
+    ksBlobName: priorAuthKsBlobName
+    knowledgeBaseName: priorAuthKnowledgeBaseName
+    foundryEndpoint: foundry.outputs.foundryEndpoint
+    modelDeploymentName: foundryModelDeploymentName
+    modelName: kbModelName
+    embeddingModelDeploymentName: embeddingModelDeploymentName
+    managedIdentityId: mcpUserAssignedIdentity.outputs.identityId
+    storageConnectionString: 'ResourceId=/subscriptions/${subscription().subscriptionId}/resourceGroups/${rg.name}/providers/Microsoft.Storage/storageAccounts/${storage.outputs.name}'
+    umFactsContainerName: 'um-facts'
+  }
+  dependsOn: [
+    searchServiceRoleAssignmentMcp
+    foundryRoleAssignmentSearchService
+    blobRoleAssignmentSearchService
+  ]
+}
+
+// =========================================
 // Microsoft Fabric for Fabric IQ Ontologies (Optional)
 // =========================================
 
@@ -1147,6 +1212,8 @@ output COSMOS_DATABASE_NAME string = lightningCosmos.outputs.databaseName
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_SEARCH_INDEX_NAME string = searchIndexName
 output AZURE_SEARCH_SERVICE_NAME string = searchService.outputs.name
+output AZURE_SEARCH_PA_INDEX_NAME string = priorAuthIndexName
+output AZURE_SEARCH_PA_KNOWLEDGE_BASE_NAME string = priorAuthKnowledgeBaseName
 
 // Ontology storage outputs (Azure Blob Storage - used when Fabric is disabled)
 output ONTOLOGY_CONTAINER_NAME string = ontologyContainerName
@@ -1207,6 +1274,5 @@ output PURVIEW_ACCOUNT_NAME string = purviewEnabled ? purviewAccount!.outputs.na
 output PURVIEW_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.endpoint : ''
 output PURVIEW_CATALOG_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.catalogEndpoint : ''
 output PURVIEW_SCAN_ENDPOINT string = purviewEnabled ? purviewAccount!.outputs.scanEndpoint : ''
-output PURVIEW_MANAGED_RESOURCE_GROUP string = purviewEnabled ? purviewAccount!.outputs.managedResourceGroupName : ''
 
 

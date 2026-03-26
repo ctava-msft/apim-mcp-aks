@@ -1,0 +1,109 @@
+{
+  "document": {
+    "name": "Medical Necessity Criteria – Biologic Therapy for Severe Asthma",
+    "document_id": "UM-MNC-001",
+    "version": "3.2",
+    "effective_date": "2025-01-01",
+    "review_cycle": "Annual",
+    "status": "Active",
+    "line_of_business": "Medicare Advantage",
+    "related_policy": "MA-ASTHMA-BIOLOGIC-001"
+  },
+  "medical_necessity_criteria": {
+    "description": "Biologic therapy may be considered medically necessary when ALL of the following criteria are met.",
+    "criteria": [
+      {
+        "criterion_id": "MNC-1",
+        "description": "Member has a confirmed diagnosis of severe persistent asthma",
+        "icd10_codes": ["J45.50", "J45.51", "J45.52"],
+        "required": true
+      },
+      {
+        "criterion_id": "MNC-2",
+        "description": "Symptoms remain uncontrolled despite high-dose inhaled corticosteroids AND long-acting beta-agonist therapy",
+        "required_medications": [
+          {
+            "class": "Inhaled Corticosteroid (ICS)",
+            "dose_requirement": "high-dose",
+            "examples": ["Fluticasone ≥500mcg/day", "Budesonide ≥800mcg/day", "Mometasone ≥400mcg/day"]
+          },
+          {
+            "class": "Long-Acting Beta-Agonist (LABA)",
+            "examples": ["Salmeterol", "Formoterol", "Vilanterol"]
+          }
+        ],
+        "required": true
+      },
+      {
+        "criterion_id": "MNC-3",
+        "description": "Evidence of frequent exacerbations (≥2 in the prior 12 months)",
+        "threshold": 2,
+        "lookback_period_months": 12,
+        "exacerbation_definition": "Emergency department visit, hospitalization, or course of systemic corticosteroids for asthma",
+        "required": true
+      },
+      {
+        "criterion_id": "MNC-4",
+        "description": "Prescribing provider is a pulmonologist or allergist",
+        "allowed_specialties": ["Pulmonology", "Allergy and Immunology"],
+        "required": true
+      }
+    ],
+    "logic": "ALL criteria must be met (AND)"
+  },
+  "approved_biologics": [
+    {
+      "drug_name": "Omalizumab",
+      "brand_name": "Xolair",
+      "mechanism": "Anti-IgE",
+      "indication": "Moderate-to-severe allergic asthma with elevated IgE",
+      "hcpcs_code": "J2357",
+      "authorization_duration_months": 12
+    },
+    {
+      "drug_name": "Mepolizumab",
+      "brand_name": "Nucala",
+      "mechanism": "Anti-IL-5",
+      "indication": "Severe eosinophilic asthma",
+      "hcpcs_code": "J2182",
+      "authorization_duration_months": 12
+    },
+    {
+      "drug_name": "Benralizumab",
+      "brand_name": "Fasenra",
+      "mechanism": "Anti-IL-5 receptor alpha",
+      "indication": "Severe eosinophilic asthma",
+      "hcpcs_code": "J0517",
+      "authorization_duration_months": 12
+    },
+    {
+      "drug_name": "Dupilumab",
+      "brand_name": "Dupixent",
+      "mechanism": "Anti-IL-4/IL-13",
+      "indication": "Moderate-to-severe eosinophilic asthma or oral corticosteroid-dependent asthma",
+      "hcpcs_code": "J0593",
+      "authorization_duration_months": 12
+    },
+    {
+      "drug_name": "Tezepelumab",
+      "brand_name": "Tezspire",
+      "mechanism": "Anti-TSLP",
+      "indication": "Severe asthma with no phenotype limitation",
+      "hcpcs_code": "J2356",
+      "authorization_duration_months": 12
+    }
+  ],
+  "prior_authorization": {
+    "required": true,
+    "applies_to": "All biologic therapies addressed under this policy",
+    "initial_approval_duration_months": 12,
+    "renewal_criteria": "Documented clinical benefit and continued medical necessity",
+    "submission_requirements": [
+      "Diagnosis and ICD-10 code",
+      "Documentation of failed step therapy",
+      "Exacerbation history (dates, settings)",
+      "Prescriber specialty verification",
+      "Baseline lab values (IgE, eosinophil count as applicable)"
+    ]
+  }
+}

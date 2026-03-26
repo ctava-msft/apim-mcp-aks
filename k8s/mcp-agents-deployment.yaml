@@ -171,6 +171,15 @@ spec:
         # =========================================
         - name: ONTOLOGY_CONTAINER_NAME
           value: "${ONTOLOGY_CONTAINER_NAME}"
+        # =========================================
+        # Agent Task Metering Configuration
+        # =========================================
+        - name: METERING_SERVICE_URL
+          value: "http://agent-task-metering.mcp-agents.svc.cluster.local"
+        - name: METERING_ENABLED
+          value: "true"
+        - name: METERING_SUBSCRIPTION_REF
+          value: "${METERING_SUBSCRIPTION_REF:-sub-mcp-agents-001}"
         volumeMounts:
         - name: tmp-volume
           mountPath: /tmp

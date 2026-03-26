@@ -1,0 +1,136 @@
+{
+  "document": {
+    "name": "Exception Logic – Step Therapy and Prior Authorization Exceptions",
+    "document_id": "UM-EXC-001",
+    "version": "1.0",
+    "effective_date": "2025-03-01",
+    "review_cycle": "Annual",
+    "status": "Active",
+    "line_of_business": "Medicare Advantage",
+    "related_policies": ["MA-ASTHMA-BIOLOGIC-001", "MA-ASTHMA-BIOLOGIC-EXC-002"]
+  },
+  "step_therapy_exceptions": {
+    "description": "Circumstances under which step therapy requirements may be waived for biologic therapies used to treat severe asthma.",
+    "exception_criteria": [
+      {
+        "exception_id": "EXC-ST-1",
+        "name": "Documented intolerance or contraindication",
+        "description": "Member has documented intolerance or contraindication to required step therapy medications.",
+        "documentation_required": [
+          "Physician attestation of intolerance or contraindication",
+          "Medical records documenting adverse reaction",
+          "Allergy documentation if applicable"
+        ],
+        "auto_approve_eligible": true
+      },
+      {
+        "exception_id": "EXC-ST-2",
+        "name": "Severe adverse reaction history",
+        "description": "History of severe adverse reaction to controller therapies.",
+        "severity_threshold": "Anaphylaxis, severe bronchospasm, hospitalization due to drug reaction",
+        "documentation_required": [
+          "Emergency department or hospital records",
+          "Adverse event documentation",
+          "Physician letter detailing event and ongoing risk"
+        ],
+        "auto_approve_eligible": true
+      },
+      {
+        "exception_id": "EXC-ST-3",
+        "name": "Prior biologic therapy under another plan",
+        "description": "Prior biologic therapy initiated under another Medicare plan with documented clinical benefit.",
+        "documentation_required": [
+          "Prior plan authorization records or pharmacy claims",
+          "Physician attestation of clinical benefit",
+          "Duration of prior biologic therapy (minimum 3 months)"
+        ],
+        "auto_approve_eligible": false,
+        "review_requirement": "Medical director review within 72 hours"
+      },
+      {
+        "exception_id": "EXC-ST-4",
+        "name": "Continuity-of-care during coverage transition",
+        "description": "Continuity-of-care considerations during transition of coverage.",
+        "applicability": "New enrollment, plan transfer, or network change",
+        "transition_period_days": 90,
+        "documentation_required": [
+          "Evidence of active biologic therapy",
+          "Treating physician attestation",
+          "Prior authorization from previous plan (if available)"
+        ],
+        "auto_approve_eligible": false,
+        "review_requirement": "Clinical review within 14 calendar days"
+      }
+    ],
+    "logic": "ANY one exception criterion met is sufficient for waiver (OR)"
+  },
+  "prior_authorization_exceptions": {
+    "description": "Prior authorization is still required even when a step therapy exception is granted. However, certain PA processing exceptions may apply.",
+    "expedited_review_criteria": [
+      {
+        "exception_id": "EXC-PA-1",
+        "name": "Urgent clinical need",
+        "description": "Delay could seriously jeopardize the member's life, health, or ability to regain maximum function.",
+        "turnaround_time_hours": 72,
+        "applies_to": ["Initial requests", "Renewals when lapse in therapy would be harmful"]
+      },
+      {
+        "exception_id": "EXC-PA-2",
+        "name": "Continuity-of-care urgent",
+        "description": "Member transitioning coverage who will experience a gap in biologic therapy within 7 days.",
+        "turnaround_time_hours": 72,
+        "applies_to": ["New enrollment transitions", "Emergency plan changes"]
+      }
+    ],
+    "standard_review": {
+      "turnaround_time_calendar_days": 14,
+      "applies_to": "All non-urgent PA requests"
+    }
+  },
+  "decision_matrix": {
+    "description": "Combined decision logic for step therapy exception + prior authorization processing.",
+    "scenarios": [
+      {
+        "scenario": "No exception, standard request",
+        "step_therapy_waived": false,
+        "pa_turnaround": "14 calendar days",
+        "action": "Complete step therapy documentation required before PA review"
+      },
+      {
+        "scenario": "Exception granted (EXC-ST-1 or EXC-ST-2), standard request",
+        "step_therapy_waived": true,
+        "pa_turnaround": "14 calendar days",
+        "action": "PA reviewed on medical necessity criteria only (skip step therapy check)"
+      },
+      {
+        "scenario": "Exception granted (EXC-ST-3 or EXC-ST-4), standard request",
+        "step_therapy_waived": true,
+        "pa_turnaround": "14 calendar days with medical director review",
+        "action": "PA reviewed with additional medical director validation"
+      },
+      {
+        "scenario": "Any exception, urgent request",
+        "step_therapy_waived": true,
+        "pa_turnaround": "72 hours",
+        "action": "Expedited PA processing with clinical urgency documentation"
+      },
+      {
+        "scenario": "Continuity-of-care transition",
+        "step_therapy_waived": true,
+        "pa_turnaround": "72 hours if gap within 7 days, otherwise 14 calendar days",
+        "action": "Temporary authorization for 90-day transition period"
+      }
+    ]
+  },
+  "regulatory_references": {
+    "cms_rule": "CMS-0057-F (CMS Interoperability and Prior Authorization Final Rule)",
+    "requirements": [
+      "Plans must include a specific reason for PA denials",
+      "Plans must report PA metrics including approval/denial rates and average turnaround times",
+      "Electronic prior authorization must be supported via FHIR-based APIs",
+      "Turnaround times must comply with Medicare Advantage regulatory standards"
+    ],
+    "effective_date": "2026-01-01",
+    "reference_url": "https://www.cms.gov/newsroom/fact-sheets/cms-interoperability-and-prior-authorization-final-rule-cms-0057-f"
+  }
+}
